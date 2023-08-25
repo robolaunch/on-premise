@@ -1,5 +1,5 @@
-# <img src="https://raw.githubusercontent.com/robolaunch/trademark/main/logos/svg/rocket.svg" width="40" height="40" align="top"> robolaunch Project Template
-
+# <img src="https://raw.githubusercontent.com/robolaunch/trademark/main/logos/svg/rocket.svg" width="40" height="40" align="top"> robolaunch On Premise Setup
+<!-- 
 [EDIT THIS: You can put badges to the README using [shields.io](https://shields.io/). Explain the repository's purpose shortly.]
 
 <div align="center">
@@ -67,4 +67,4 @@ After [using this project as template](https://github.com/robolaunch/template/ge
 
 ## Contributing
 
-Please see [this guide](./CONTRIBUTING.md) if you want to contribute.
+Please see [this guide](./CONTRIBUTING.md) if you want to contribute. -->
