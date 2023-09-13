@@ -1,6 +1,26 @@
 #!/bin/bash
 set -e;
 
+ARCH=$(dpkg --print-architecture);
+TIMESTAMP=$(date +%s);
+DIR=robolaunch
+DIR_PATH=~/$DIR
+mkdir -p $DIR_PATH;
+OUTPUT_FILE="$DIR/out_$TIMESTAMP.log";
+touch $OUTPUT_FILE;
+
+exec 3>&1 >$OUTPUT_FILE 2>&1;
+print_global_log () {
+    echo -e "${GREEN}$1${NC}" >&3;
+}
+print_log () {
+    echo -e "${GREEN}$1${NC}";
+}
+print_err () {
+    echo -e "${RED}Error: $1${NC}" >&3;
+    exit 1;
+}
+
 ORGANIZATION=org_$org_name_plain
 GROUP=org_$org_name_plain_admin
 TEAM=org_$org_name_plain
@@ -23,31 +43,13 @@ else
     MIG_INSTANCE_TYPE=$available_mig_instance
 fi
 
-ARCH=$(dpkg --print-architecture);
-TIMESTAMP=$(date +%s);
-DIR=robolaunch
-DIR_PATH=~/$DIR
-mkdir -p $DIR_PATH;
-OUTPUT_FILE="$DIR/out_$TIMESTAMP.log";
-touch $OUTPUT_FILE;
-
 BLUE='\033[0;34m';
 GREEN='\033[0;32m';
 RED='\033[0;31m';
 NC='\033[0m';
 
 KUBECONFIG="/etc/rancher/k3s/k3s.yaml";
-exec 3>&1 >$OUTPUT_FILE 2>&1;
-print_global_log () {
-    echo -e "${GREEN}$1${NC}" >&3;
-}
-print_log () {
-    echo -e "${GREEN}$1${NC}";
-}
-print_err () {
-    echo -e "${RED}Error: $1${NC}" >&3;
-    exit 1;
-}
+
 set_cluster_root_domain () {
     CLUSTER_ROOT_DOMAIN=$(kubectl get cm coredns -n kube-system -o jsonpath="{.data.Corefile}" \
         | grep ".local " \
