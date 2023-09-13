@@ -17,7 +17,12 @@ OIDC_ORGANIZATION_CLIENT_SECRET=$org_client_secret
 COOKIE_SECRET=MFlZN1J5eitIdUplckJLaW55YlF6UjVlQ3lneFJBcEU=
 DOMAIN=$root_domain
 SERVER_URL=$CLOUD_INSTANCE_ALIAS.$DOMAIN
-MIG_INSTANCE_TYPE=$available_mig_instance
+if [[ -z "${available_mig_instance}" ]]; then
+    print_log "Skipping MIG configuration..."
+else
+    MIG_INSTANCE_TYPE=$available_mig_instance
+fi
+
 
 ARCH=$(dpkg --print-architecture);
 TIMESTAMP=$(date +%s);
