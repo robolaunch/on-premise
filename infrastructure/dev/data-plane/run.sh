@@ -673,14 +673,14 @@ print_global_log "Installing metrics-server...";
 (install_metrics_server)
 print_global_log "Installing ingress...";
 (install_ingress_nginx)
-# print_global_log "Installing oauth2-proxy...";
-# (install_oauth2_proxy)
+print_global_log "Installing oauth2-proxy...";
+(install_oauth2_proxy)
 print_global_log "Installing openebs...";
 (install_openebs)
 print_global_log "Installing cert-manager...";
 (install_cert_manager)
-# print_global_log "Installing proxy-ingress...";
-# (install_proxy_ingress)
+print_global_log "Installing proxy-ingress...";
+(install_proxy_ingress)
 print_global_log "Installing NVIDIA runtime...";
 (install_nvidia_runtime_class)
 print_global_log "Installing node feature discovery...";
