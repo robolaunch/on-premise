@@ -218,7 +218,7 @@ set_up_k3s () {
           --disable=local-storage \
           --disable=coredns \
           --disable=metrics-server \
-          --pause-image=quay.io/robolaunchio/platform:mirrored-pause-3.6 \
+          --pause-image=quay.io/robolaunchio/mirrored-pause:3.6 \
           --kube-apiserver-arg \
             oidc-issuer-url=$OIDC_URL \
           --kube-apiserver-arg \
@@ -256,17 +256,17 @@ install_openebs () {
     echo "image:
   repository: quay.io/
 helper:
-  image: robolaunchio/platform
-  imageTag: linux-utils-3.4.0
+  image: robolaunchio/linux-utils
+  imageTag: 3.4.0
 ndm:
-  image: robolaunchio/platform
-  imageTag: node-disk-manager-2.1.0
+  image: robolaunchio/node-disk-manager
+  imageTag: 2.1.0
 ndmOperator:
-  image: robolaunchio/platform
-  imageTag: node-disk-operator-2.1.0
+  image: robolaunchio/node-disk-operator
+  imageTag: 2.1.0
 localprovisioner:
-  image: robolaunchio/platform
-  imageTag: provisioner-localpv-3.4.0" > $DIR_PATH/openebs/values.yaml;
+  image: robolaunchio/provisioner-localpv
+  imageTag: 3.4.0" > $DIR_PATH/openebs/values.yaml;
     helm upgrade --install \
       openebs $DIR_PATH/openebs/openebs-3.8.0.tgz \
       --namespace openebs \
@@ -286,8 +286,8 @@ EOF
 }
 install_node_feature_discovery () {
     echo "image:
-  repository: quay.io/robolaunchio/platform
-  tag: node-feature-discovery-v0.13.4" > $DIR_PATH/node-feature-discovery/values.yaml;
+  repository: quay.io/robolaunchio/node-feature-discovery
+  tag: v0.13.4" > $DIR_PATH/node-feature-discovery/values.yaml;
     helm upgrade --install \
       nfd $DIR_PATH/node-feature-discovery/node-feature-discovery-chart-0.13.4.tgz \
       --namespace nfd \
@@ -296,8 +296,8 @@ install_node_feature_discovery () {
 }
 install_nvidia_device_plugin () {
     echo "image:
-  repository: quay.io/robolaunchio/platform
-  tag: k8s-device-plugin-v0.13.0" > $DIR_PATH/nvidia-device-plugin/values.yaml;
+  repository: quay.io/robolaunchio/k8s-device-plugin
+  tag: v0.13.0" > $DIR_PATH/nvidia-device-plugin/values.yaml;
     if [[ -z "${MIG_INSTANCE_TYPE}" ]]; then
       echo "version: v1
 sharing:
@@ -331,8 +331,8 @@ install_nvidia_gpu_feature_discovery () {
         echo "nfd:
   enabled: false
 image:
-  repository: quay.io/robolaunchio/platform
-  tag: gpu-feature-discovery-v0.8.1" > $DIR_PATH/nvidia-gpu-feature-discovery/values.yaml;
+  repository: quay.io/robolaunchio/gpu-feature-discovery
+  tag: v0.8.1" > $DIR_PATH/nvidia-gpu-feature-discovery/values.yaml;
         helm upgrade -i nvgfd $DIR_PATH/nvidia-gpu-feature-discovery/gpu-feature-discovery-0.8.1.tgz \
         --namespace nvidia-device-plugin \
         --create-namespace \
@@ -344,21 +344,21 @@ image:
 install_cert_manager () {
     echo "installCRDs: true
 image:
-  repository: quay.io/robolaunchio/platform
-  tag: cert-manager-controller-v1.12.4
+  repository: quay.io/robolaunchio/cert-manager-controller
+  tag: v1.12.4
 webhook:
   image:
-    repository: quay.io/robolaunchio/platform
-    tag: cert-manager-webhook-v1.12.4
+    repository: quay.io/robolaunchio/cert-manager-webhook
+    tag: v1.12.4
 cainjector:
   image:
-    repository: quay.io/robolaunchio/platform
-    tag: cert-manager-cainjector-v1.12.4
+    repository: quay.io/robolaunchio/cert-manager-cainjector
+    tag: v1.12.4
 startupapicheck:
   enabled: false
   image:
-    repository: quay.io/robolaunchio/platform
-    tag: cert-manager-ctl-v1.12.4" > $DIR_PATH/cert-manager/values.yaml;
+    repository: quay.io/robolaunchio/cert-manager-ctl
+    tag: v1.12.4" > $DIR_PATH/cert-manager/values.yaml;
     helm upgrade --install \
       cert-manager $DIR_PATH/cert-manager/cert-manager-v1.12.4.tgz \
       --namespace cert-manager \
@@ -394,8 +394,8 @@ subjects:
 }
 install_coredns () {
     echo "image:
-  repository: quay.io/robolaunchio/platform
-  tag: coredns-1.11.1
+  repository: quay.io/robolaunchio/coredns
+  tag: 1.11.1
 service:
   clusterIP: 10.200.2.10
 servers:
@@ -440,8 +440,8 @@ servers:
 }
 install_metrics_server () {
     echo "image:
-  repository: quay.io/robolaunchio/platform
-  tag: metrics-server-v0.6.4" > $DIR_PATH/metrics-server/values.yaml
+  repository: quay.io/robolaunchio/metrics-server
+  tag: v0.6.4" > $DIR_PATH/metrics-server/values.yaml
     helm upgrade --install \
       metrics-server $DIR_PATH/metrics-server/metrics-server-3.11.0.tgz \
       --namespace metrics-server \
@@ -461,15 +461,15 @@ install_ingress_nginx () {
     default: true
   image:
     registry: quay.io
-    image: robolaunchio/platform
-    tag: v1.8.1-ingress-controller
+    image: robolaunchio/ingress-controller
+    tag: v1.8.1
     digest: ""
   admissionWebhooks:
     patch:
       image:
         registry: quay.io
-        image: robolaunchio/platform
-        tag: kube-webhook-certgen-v20230407
+        image: robolaunchio/kube-webhook-certgen
+        tag: v20230407
         digest: ""
   service:
     type: NodePort
@@ -477,8 +477,8 @@ defaultBackend:
   enabled: true
   image:
     registry: quay.io
-    image: robolaunchio/platform
-    tag: defaultbackend-amd64-1.5" > $DIR_PATH/ingress-nginx/values.yaml
+    image: robolaunchio/defaultbackend-amd64
+    tag: 1.5" > $DIR_PATH/ingress-nginx/values.yaml
 	helm upgrade --install \
       ingress-nginx $DIR_PATH/ingress-nginx/ingress-nginx-4.7.1.tgz \
       --namespace ingress-nginx \
@@ -488,8 +488,8 @@ defaultBackend:
 }
 install_oauth2_proxy () {
 	echo "image:
-  repository: quay.io/robolaunchio/platform
-  tag: 7.5.0-oauth2-proxy
+  repository: quay.io/robolaunchio/oauth2-proxy
+  tag: 7.5.0
 replicaCount: 1
 config:
   clientID: $OIDC_ORGANIZATION_CLIENT_ID
@@ -559,8 +559,8 @@ install_operator_suite () {
     echo "controllerManager:
   kubeRbacProxy:
     image:
-      repository: quay.io/robolaunchio/platform
-      tag: kube-rbac-proxy-v0.13.0
+      repository: quay.io/robolaunchio/kube-rbac-proxy
+      tag: v0.13.0
   manager:
     image:
       repository: quay.io/robolaunchio/platform
