@@ -164,7 +164,7 @@ create_directories () {
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/metrics-server https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/metrics-server-3.11.0.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/openebs https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/openebs-3.8.0.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/node-feature-discovery https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/node-feature-discovery-chart-0.13.4.tgz
-    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/nvidia-device-plugin https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/nvidia-device-plugin-0.13.0.tgz
+    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/nvidia-device-plugin https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/nvidia-device-plugin-0.14.0.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/nvidia-gpu-feature-discovery https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/gpu-feature-discovery-0.8.1.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/cert-manager https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/cert-manager-v1.12.4.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/ingress-nginx https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/ingress-nginx-4.7.1.tgz
@@ -298,7 +298,7 @@ install_node_feature_discovery () {
 install_nvidia_device_plugin () {
     echo "image:
   repository: quay.io/robolaunchio/k8s-device-plugin
-  tag: v0.13.0" > $DIR_PATH/nvidia-device-plugin/values.yaml;
+  tag: v0.14.1" > $DIR_PATH/nvidia-device-plugin/values.yaml;
     if [[ -z "${MIG_INSTANCE_TYPE}" ]]; then
       echo "version: v1
 sharing:
@@ -318,7 +318,7 @@ sharing:
     - name: nvidia.com/$MIG_INSTANCE_TYPE
       replicas: 2" > $DIR_PATH/nvidia-device-plugin/config.yaml;
     fi
-    helm upgrade -i nvdp $DIR_PATH/nvidia-device-plugin/nvidia-device-plugin-0.13.0.tgz \
+    helm upgrade -i nvdp $DIR_PATH/nvidia-device-plugin/nvidia-device-plugin-0.14.0.tgz \
     --namespace nvidia-device-plugin \
     --create-namespace \
     --set-file config.map.config=$DIR/nvidia-device-plugin/config.yaml \
