@@ -37,6 +37,7 @@ OIDC_ORGANIZATION_CLIENT_SECRET=$org_client_secret
 COOKIE_SECRET=MFlZN1J5eitIdUplckJLaW55YlF6UjVlQ3lneFJBcEU=
 DOMAIN=$root_domain
 SERVER_URL=$CLOUD_INSTANCE_ALIAS.$DOMAIN
+GITHUB_PATH=$github_pat
 if [[ -z "${available_mig_instance}" ]]; then
     print_log "Skipping MIG configuration..."
 else
@@ -135,7 +136,7 @@ check_inputs () {
     set_desired_service_cidr;
 }
 get_versioning_map () {
-    wget -P $DIR_PATH https://raw.githubusercontent.com/robolaunch/robolaunch/main/platform.yaml;
+    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH https://raw.githubusercontent.com/robolaunch/robolaunch/main/platform.yaml;
 }
 opening () {
     apt-get update 2>/dev/null 1>/dev/null;
@@ -159,16 +160,16 @@ create_directories () {
     mkdir -p $DIR_PATH/oauth2-proxy;
     mkdir -p $DIR_PATH/robot-operator;
 
-    wget -P $DIR_PATH/coredns https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/coredns-1.26.0.tgz
-    wget -P $DIR_PATH/metrics-server https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/metrics-server-3.11.0.tgz
-    wget -P $DIR_PATH/openebs https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/openebs-3.8.0.tgz
-    wget -P $DIR_PATH/node-feature-discovery https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/node-feature-discovery-chart-0.13.4.tgz
-    wget -P $DIR_PATH/nvidia-device-plugin https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/nvidia-device-plugin-0.13.0.tgz
-    wget -P $DIR_PATH/nvidia-gpu-feature-discovery https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/gpu-feature-discovery-0.8.1.tgz
-    wget -P $DIR_PATH/cert-manager https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/cert-manager-v1.12.4.tgz
-    wget -P $DIR_PATH/ingress-nginx https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/ingress-nginx-4.7.1.tgz
-    wget -P $DIR_PATH/oauth2-proxy https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/oauth2-proxy-6.17.0.tgz
-    wget -P $DIR_PATH/robot-operator https://github.com/robolaunch/charts/releases/download/robot-operator-$ROBOT_OPERATOR_CHART_VERSION/robot-operator-$ROBOT_OPERATOR_CHART_VERSION.tgz
+    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/coredns https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/coredns-1.26.0.tgz
+    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/metrics-server https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/metrics-server-3.11.0.tgz
+    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/openebs https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/openebs-3.8.0.tgz
+    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/node-feature-discovery https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/node-feature-discovery-chart-0.13.4.tgz
+    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/nvidia-device-plugin https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/nvidia-device-plugin-0.13.0.tgz
+    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/nvidia-gpu-feature-discovery https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/gpu-feature-discovery-0.8.1.tgz
+    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/cert-manager https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/cert-manager-v1.12.4.tgz
+    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/ingress-nginx https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/ingress-nginx-4.7.1.tgz
+    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/oauth2-proxy https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/oauth2-proxy-6.17.0.tgz
+    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/robot-operator https://github.com/robolaunch/charts/releases/download/robot-operator-$ROBOT_OPERATOR_CHART_VERSION/robot-operator-$ROBOT_OPERATOR_CHART_VERSION.tgz
 }
 install_pre_tools () {
     print_log "Installing Tools...";
@@ -635,6 +636,11 @@ spec:
       value: true
 EOF
 }
+
+##############################################################
+##############################################################
+##############################################################
+
 print_global_log "Waiting for the preflight checks...";
 (check_if_root)
 (install_pre_tools)
