@@ -564,8 +564,8 @@ install_operator_suite () {
       tag: v0.13.0
   manager:
     image:
-      repository: quay.io/robolaunchio/platform
-      tag: robot-controller-manager-v$ROBOT_OPERATOR_CHART_VERSION" > $DIR_PATH/robot-operator/values.yaml;
+      repository: quay.io/robolaunchio/robot-controller-manager
+      tag: v$ROBOT_OPERATOR_CHART_VERSION" > $DIR_PATH/robot-operator/values.yaml;
     RO_HELM_INSTALL_SUCCEEDED="false"
     while [ "$RO_HELM_INSTALL_SUCCEEDED" != "true" ]
     do 
