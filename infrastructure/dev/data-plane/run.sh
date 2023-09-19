@@ -22,7 +22,7 @@ print_err () {
 }
 
 ORGANIZATION=org_$org_name_plain
-GROUP=org_$org_name_plain_admin
+GROUP=org_$org_name_plain"_admin"
 TEAM=org_$org_name_plain
 REGION=$region_plain
 CLOUD_INSTANCE=$cluster_plain
