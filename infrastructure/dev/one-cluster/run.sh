@@ -22,7 +22,7 @@ print_err () {
 }
 
 ORGANIZATION=org_$org_name_plain
-GROUP=org_$org_name_plain"_admin"
+GROUP=org_$org_name_plain_admin
 TEAM=org_$org_name_plain
 REGION=$region_plain
 CLOUD_INSTANCE=$cluster_plain
@@ -136,7 +136,7 @@ check_inputs () {
     set_desired_service_cidr;
 }
 get_versioning_map () {
-    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH https://raw.githubusercontent.com/robolaunch/robolaunch/main/platform.yaml;
+    wget -P $DIR_PATH https://raw.githubusercontent.com/robolaunch/robolaunch/main/platform.yaml;
 }
 opening () {
     apt-get update 2>/dev/null 1>/dev/null;
