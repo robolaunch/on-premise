@@ -49,7 +49,7 @@ GREEN='\033[0;32m';
 RED='\033[0;31m';
 NC='\033[0m';
 
-KUBECONFIG="/etc/rancher/k3s/k3s.yaml";
+export KUBECONFIG="/etc/rancher/k3s/k3s.yaml";
 
 set_cluster_root_domain () {
     CLUSTER_ROOT_DOMAIN=$(kubectl get cm coredns -n kube-system -o jsonpath="{.data.Corefile}" \
