@@ -165,7 +165,7 @@ create_directories () {
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/openebs https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/openebs-3.8.0.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/node-feature-discovery https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/node-feature-discovery-chart-0.14.3.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/nvidia-device-plugin https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/nvidia-device-plugin-0.14.2.tgz
-    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/nvidia-gpu-feature-discovery https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/gpu-feature-discovery-0.8.1.tgz
+    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/nvidia-gpu-feature-discovery https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/gpu-feature-discovery-0.8.2.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/cert-manager https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/cert-manager-v1.12.4.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/ingress-nginx https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/ingress-nginx-4.7.1.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/oauth2-proxy https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/oauth2-proxy-6.17.0.tgz
@@ -285,15 +285,15 @@ metadata:
 handler: nvidia
 EOF
 }
-install_node_feature_discovery () {
-    echo "image:
-  repository: quay.io/robolaunchio/node-feature-discovery
-  tag: v0.14.3" > $DIR_PATH/node-feature-discovery/values.yaml;
+install_gpu_feature_discovery () {
+  #   echo "image:
+  # repository: quay.io/robolaunchio/node-feature-discovery
+  # tag: v0.14.3" > $DIR_PATH/node-feature-discovery/values.yaml;
     helm upgrade --install \
-      nfd $DIR_PATH/node-feature-discovery/node-feature-discovery-chart-0.14.3.tgz \
-      --namespace nfd \
-      --create-namespace \
-      -f $DIR_PATH/node-feature-discovery/values.yaml;
+      nfd $DIR_PATH/gpu-feature-discovery/gpu-feature-discovery-0.8.2.tgz \
+      --namespace gpu-feature-discovery \
+      --create-namespace
+      # -f $DIR_PATH/node-feature-discovery/values.yaml;
 }
 install_nvidia_device_plugin () {
     echo "image:
@@ -674,8 +674,8 @@ print_global_log "Installing cert-manager...";
 # (install_proxy_ingress)
 print_global_log "Installing NVIDIA runtime...";
 (install_nvidia_runtime_class)
-print_global_log "Installing node feature discovery...";
-(install_node_feature_discovery)
+print_global_log "Installing GPU feature discovery...";
+(install_gpu_feature_discovery)
 print_global_log "Installing NVIDIA device plugin...";
 (install_nvidia_device_plugin)
 print_global_log "Installing robolaunch Operator Suite...";
