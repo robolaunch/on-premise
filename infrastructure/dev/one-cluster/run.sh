@@ -298,7 +298,7 @@ install_node_feature_discovery () {
 install_nvidia_device_plugin () {
     echo "image:
   repository: quay.io/robolaunchio/k8s-device-plugin
-  tag: v0.14.1" > $DIR_PATH/nvidia-device-plugin/values.yaml;
+  tag: v0.14.2" > $DIR_PATH/nvidia-device-plugin/values.yaml;
     if [[ -z "${MIG_INSTANCE_TYPE}" ]]; then
       echo "version: v1
 sharing:
