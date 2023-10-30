@@ -163,8 +163,8 @@ create_directories () {
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/coredns https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/coredns-1.26.0.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/metrics-server https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/metrics-server-3.11.0.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/openebs https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/openebs-3.8.0.tgz
-    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/node-feature-discovery https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/node-feature-discovery-chart-0.13.4.tgz
-    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/nvidia-device-plugin https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/nvidia-device-plugin-0.14.0.tgz
+    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/node-feature-discovery https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/node-feature-discovery-chart-0.14.3.tgz
+    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/nvidia-device-plugin https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/nvidia-device-plugin-0.14.2.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/nvidia-gpu-feature-discovery https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/gpu-feature-discovery-0.8.1.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/cert-manager https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/cert-manager-v1.12.4.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/ingress-nginx https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/ingress-nginx-4.7.1.tgz
@@ -288,9 +288,9 @@ EOF
 install_node_feature_discovery () {
     echo "image:
   repository: quay.io/robolaunchio/node-feature-discovery
-  tag: v0.13.4" > $DIR_PATH/node-feature-discovery/values.yaml;
+  tag: v0.14.3" > $DIR_PATH/node-feature-discovery/values.yaml;
     helm upgrade --install \
-      nfd $DIR_PATH/node-feature-discovery/node-feature-discovery-chart-0.13.4.tgz \
+      nfd $DIR_PATH/node-feature-discovery/node-feature-discovery-chart-0.14.3.tgz \
       --namespace nfd \
       --create-namespace \
       -f $DIR_PATH/node-feature-discovery/values.yaml;
@@ -318,29 +318,12 @@ sharing:
     - name: nvidia.com/$MIG_INSTANCE_TYPE
       replicas: 2" > $DIR_PATH/nvidia-device-plugin/config.yaml;
     fi
-    helm upgrade -i nvdp $DIR_PATH/nvidia-device-plugin/nvidia-device-plugin-0.14.0.tgz \
+    helm upgrade -i nvdp $DIR_PATH/nvidia-device-plugin/nvidia-device-plugin-0.14.2.tgz \
     --namespace nvidia-device-plugin \
     --create-namespace \
     --set-file config.map.config=$DIR/nvidia-device-plugin/config.yaml \
     --set runtimeClassName=nvidia \
     -f $DIR_PATH/nvidia-device-plugin/values.yaml;
-}
-install_nvidia_gpu_feature_discovery () {
-    if [[ -z "${MIG_INSTANCE_TYPE}" ]]; then
-        echo "Skipping NVIDIA GPU feature discovery installation."
-    else
-        echo "nfd:
-  enabled: false
-image:
-  repository: quay.io/robolaunchio/gpu-feature-discovery
-  tag: v0.8.1" > $DIR_PATH/nvidia-gpu-feature-discovery/values.yaml;
-        helm upgrade -i nvgfd $DIR_PATH/nvidia-gpu-feature-discovery/gpu-feature-discovery-0.8.1.tgz \
-        --namespace nvidia-device-plugin \
-        --create-namespace \
-        --set migStrategy=mixed \
-        --set runtimeClassName=nvidia \
-        -f $DIR_PATH/nvidia-gpu-feature-discovery/values.yaml;
-    fi
 }
 install_cert_manager () {
     echo "installCRDs: true
@@ -695,7 +678,5 @@ print_global_log "Installing node feature discovery...";
 (install_node_feature_discovery)
 print_global_log "Installing NVIDIA device plugin...";
 (install_nvidia_device_plugin)
-print_global_log "Installing NVIDIA GPU feature discovery...";
-(install_nvidia_gpu_feature_discovery)
 print_global_log "Installing robolaunch Operator Suite...";
 (install_operator_suite)
