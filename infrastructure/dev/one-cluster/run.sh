@@ -292,7 +292,8 @@ install_gpu_feature_discovery () {
     helm upgrade --install \
       nfd $DIR_PATH/nvidia-gpu-feature-discovery/gpu-feature-discovery-0.8.2.tgz \
       --namespace gpu-feature-discovery \
-      --create-namespace
+      --create-namespace \
+      --set runtimeClassName=nvidia
       # -f $DIR_PATH/node-feature-discovery/values.yaml;
 }
 install_nvidia_device_plugin () {
