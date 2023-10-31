@@ -290,7 +290,7 @@ install_gpu_feature_discovery () {
   # repository: quay.io/robolaunchio/node-feature-discovery
   # tag: v0.14.3" > $DIR_PATH/node-feature-discovery/values.yaml;
     helm upgrade --install \
-      nfd $DIR_PATH/gpu-feature-discovery/gpu-feature-discovery-0.8.2.tgz \
+      nfd $DIR_PATH/nvidia-gpu-feature-discovery/gpu-feature-discovery-0.8.2.tgz \
       --namespace gpu-feature-discovery \
       --create-namespace
       # -f $DIR_PATH/node-feature-discovery/values.yaml;
