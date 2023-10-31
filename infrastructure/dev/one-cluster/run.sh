@@ -175,7 +175,7 @@ install_pre_tools () {
     print_log "Installing Tools...";
     # apt packages
     apt-get update;
-    apt-get install -y curl wget;
+    apt-get install -y curl wget net-tools;
     # install yq
     wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_${ARCH};
     chmod a+x /usr/local/bin/yq;
@@ -576,47 +576,24 @@ kind: Namespace
 metadata:
   name: rl-metrics
 EOF
+}
+deploy_metrics_exporter () {
+    DEFAULT_NETWORK_INTERFACE=$(route | grep '^default' | grep -o '[^ ]*$')
     cat << EOF | kubectl apply -f -
-apiVersion: types.kubefed.io/v1beta1
-kind: FederatedNamespace
+apiVersion: robot.roboscale.io/v1alpha1
+kind: MetricsExporter
 metadata:
   name: rl-metrics
   namespace: rl-metrics
 spec:
-  placement:
-    clusters:
-    - name: $CLOUD_INSTANCE
-EOF
-}
-deploy_metrics_exporter () {
-    cat << EOF | kubectl apply -f -
-apiVersion: types.kubefed.io/v1beta1
-kind: FederatedMetricsExporter
-metadata:
-  name: metrics-exporter
-  namespace: rl-metrics
-spec:
-  template:
-    spec:
-      gpu:
-        track: false
-        interval: 5
-      network:
-        track: true
-        interval: 3
-        interfaces:
-        - ens5
-        - eth0	
-        - submariner
-        - vx-submariner
-  placement:
-    clusters:
-    - name: $CLOUD_INSTANCE
-  overrides:
-  - clusterName: $CLOUD_INSTANCE
-    clusterOverrides:
-    - path: "/spec/gpu/track"
-      value: true
+  gpu:
+    track: true
+    interval: 5
+  network:
+    track: true
+    interval: 3
+    interfaces:
+    - $DEFAULT_NETWORK_INTERFACE
 EOF
 }
 
@@ -680,3 +657,7 @@ print_global_log "Installing NVIDIA device plugin...";
 (install_nvidia_device_plugin)
 print_global_log "Installing robolaunch Operator Suite...";
 (install_operator_suite)
+print_global_log "Deploying MetricsExporter namespace...";
+(deploy_metrics_namespace)
+print_global_log "Deploying MetricsExporter...";
+(deploy_metrics_exporter)
