@@ -43,6 +43,11 @@ if [[ -z "${available_mig_instance}" ]]; then
 else
     MIG_INSTANCE_TYPE=$available_mig_instance
 fi
+if [[ -z "${mig_strategy}" ]]; then
+    MIG_STRATEGY=none
+else
+    MIG_STRATEGY=$mig_strategy
+fi
 
 BLUE='\033[0;34m';
 GREEN='\033[0;32m';
@@ -286,15 +291,12 @@ handler: nvidia
 EOF
 }
 install_gpu_feature_discovery () {
-  #   echo "image:
-  # repository: quay.io/robolaunchio/node-feature-discovery
-  # tag: v0.14.3" > $DIR_PATH/node-feature-discovery/values.yaml;
     helm upgrade --install \
       nfd $DIR_PATH/nvidia-gpu-feature-discovery/gpu-feature-discovery-0.8.2.tgz \
       --namespace gpu-feature-discovery \
       --create-namespace \
-      --set runtimeClassName=nvidia
-      # -f $DIR_PATH/node-feature-discovery/values.yaml;
+      --set runtimeClassName=nvidia \
+      --set migStrategy=$MIG_STRATEGY
 }
 install_nvidia_device_plugin () {
     echo "image:
