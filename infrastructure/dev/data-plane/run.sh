@@ -161,6 +161,7 @@ create_directories () {
     mkdir -p $DIR_PATH/node-feature-discovery;
     mkdir -p $DIR_PATH/nvidia-device-plugin;
     mkdir -p $DIR_PATH/nvidia-gpu-feature-discovery;
+    mkdir -p $DIR_PATH/nvidia-dcgm-exporter;
     mkdir -p $DIR_PATH/ingress-nginx;
     mkdir -p $DIR_PATH/oauth2-proxy;
     mkdir -p $DIR_PATH/robot-operator;
@@ -171,6 +172,7 @@ create_directories () {
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/node-feature-discovery https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/node-feature-discovery-chart-0.14.3.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/nvidia-device-plugin https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/nvidia-device-plugin-0.14.2.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/nvidia-gpu-feature-discovery https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/gpu-feature-discovery-0.8.2.tgz
+    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/nvidia-dcgm-exporter https://github.com/robolaunch/on-premise/releases/download/0.1.2-prerelease.10/dcgm-exporter-3.2.0.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/cert-manager https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/cert-manager-v1.12.4.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/ingress-nginx https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/ingress-nginx-4.7.1.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/oauth2-proxy https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/oauth2-proxy-6.17.0.tgz
@@ -580,6 +582,22 @@ metadata:
   name: rl-metrics
 EOF
 }
+install_nvidia_dcgm_exporter () {
+    kubectl apply -f https://raw.githubusercontent.com/prometheus-community/helm-charts/main/charts/kube-prometheus-stack/charts/crds/crds/crd-servicemonitors.yaml;
+    echo "image:
+  repository: nvcr.io/nvidia/k8s/dcgm-exporter
+  tag: 3.3.0-3.2.0-ubuntu22.04
+arguments: ["-f", "/etc/dcgm-exporter/dcp-metrics-included.csv"]
+serviceMonitor:
+  enabled: true
+  interval: 3s" > $DIR_PATH/nvidia-dcgm-exporter/values.yaml
+    helm upgrade --install \
+      dcgm-exporter $DIR_PATH/nvidia-dcgm-exporter/dcgm-exporter-3.2.0.tgz \
+      --namespace rl-metrics \
+      --create-namespace \
+      --set runtimeClassName=nvidia \
+      -f $DIR_PATH/nvidia-dcgm-exporter/values.yaml;
+}
 deploy_metrics_exporter () {
     DEFAULT_NETWORK_INTERFACE=$(route | grep '^default' | grep -o '[^ ]*$')
     cat << EOF | kubectl apply -f -
@@ -662,5 +680,7 @@ print_global_log "Installing robolaunch Operator Suite...";
 (install_operator_suite)
 print_global_log "Deploying MetricsExporter namespace...";
 (deploy_metrics_namespace)
+print_global_log "Installing NVIDIA DCGM exporter...";
+(install_nvidia_dcgm_exporter)
 print_global_log "Deploying MetricsExporter...";
 (deploy_metrics_exporter)
