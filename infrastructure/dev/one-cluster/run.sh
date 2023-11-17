@@ -166,7 +166,7 @@ create_directories () {
     mkdir -p $DIR_PATH/oauth2-proxy;
     mkdir -p $DIR_PATH/robot-operator;
 
-    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/coredns https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/coredns-1.26.0.tgz
+    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/coredns https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/coredns-1.24.5.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/metrics-server https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/metrics-server-3.11.0.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/openebs https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/openebs-3.8.0.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/node-feature-discovery https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/node-feature-discovery-chart-0.14.3.tgz
@@ -384,7 +384,7 @@ subjects:
 install_coredns () {
     echo "image:
   repository: quay.io/robolaunchio/coredns
-  tag: 1.11.1
+  tag: 1.10.1
 service:
   clusterIP: 10.200.2.10
 servers:
@@ -421,7 +421,7 @@ servers:
   - name: reload
   - name: loadbalance" > $DIR_PATH/coredns/values.yaml
 	helm upgrade --install \
-      coredns $DIR_PATH/coredns/coredns-1.26.0.tgz \
+      coredns $DIR_PATH/coredns/coredns-1.24.5.tgz \
       --namespace coredns \
       --create-namespace \
       -f $DIR_PATH/coredns/values.yaml
