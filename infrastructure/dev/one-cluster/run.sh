@@ -23,6 +23,7 @@ print_err () {
 
 ORGANIZATION=org_$org_name_plain
 GROUP=org_$org_name_plain"_admin"
+GROUP_SUPER_ADMIN=org_$org_name_plain"_super_admin"
 TEAM=org_$org_name_plain
 REGION=$region_plain
 CLOUD_INSTANCE=$cluster_plain
@@ -344,15 +345,66 @@ startupapicheck:
     # TODO: Check if cert-manager is up & running.
     sleep 10;
 }
+create_super_admin_crb () {
+	echo "kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: $ORGANIZATION-super-admin-role
+rules:
+  - apiGroups: ['*']
+    resources: ['*']
+    verbs: ['*']
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: $ORGANIZATION-super-admin-crb
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: $ORGANIZATION-super-admin-role
+subjects:
+- kind: Group
+  name: $GROUP_SUPER_ADMIN
+  apiGroup: rbac.authorization.k8s.io" > crb.yaml;
+	kubectl create -f crb.yaml;
+	rm -rf crb.yaml;
+}
 create_admin_crb () {
 	echo "kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: $ORGANIZATION-admin-role
-rules:
-  - apiGroups: ['*']
-    resources: ['*']
-    verbs: ['*']
+rules:                                                                                                                                                                                                    
+- apiGroups:         
+  - '*'              
+  resources:         
+  - nodes            
+  - namespaces       
+  - metricsexporters 
+  - secrets          
+  - roles            
+  - rolebindings     
+  - pods             
+  verbs:             
+  - get              
+  - list             
+- apiGroups:         
+  - '*'              
+  resources:         
+  - secrets          
+  - namespaces       
+  verbs:             
+  - create           
+- apiGroups:         
+  - '*'              
+  resources:         
+  - roles            
+  - rolebindings     
+  verbs:             
+  - create
+  - bind
+  - escalate
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -365,9 +417,9 @@ roleRef:
 subjects:
 - kind: Group
   name: $GROUP
-  apiGroup: rbac.authorization.k8s.io" > crb.yaml;
-	kubectl create -f crb.yaml;
-	rm -rf crb.yaml;
+  apiGroup: rbac.authorization.k8s.io" > user-crb.yaml;
+	kubectl create -f user-crb.yaml;
+	rm -rf user-crb.yaml;
 }
 install_coredns () {
     echo "image:
@@ -644,6 +696,8 @@ print_global_log "Labeling node...";
 (label_node)
 print_global_log "Creating admin crb...";
 (create_admin_crb)
+print_global_log "Creating super admin crb...";
+(create_super_admin_crb)
 print_global_log "Installing coredns...";
 (install_coredns)
 print_global_log "Installing metrics-server...";
