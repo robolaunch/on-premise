@@ -158,9 +158,7 @@ create_directories () {
     mkdir -p $DIR_PATH/metrics-server;
     mkdir -p $DIR_PATH/openebs;
     mkdir -p $DIR_PATH/cert-manager;
-    mkdir -p $DIR_PATH/node-feature-discovery;
     mkdir -p $DIR_PATH/nvidia-device-plugin;
-    mkdir -p $DIR_PATH/nvidia-gpu-feature-discovery;
     mkdir -p $DIR_PATH/nvidia-dcgm-exporter;
     mkdir -p $DIR_PATH/ingress-nginx;
     mkdir -p $DIR_PATH/oauth2-proxy;
@@ -169,9 +167,7 @@ create_directories () {
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/coredns https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/coredns-1.24.5.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/metrics-server https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/metrics-server-3.11.0.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/openebs https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/openebs-3.8.0.tgz
-    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/node-feature-discovery https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/node-feature-discovery-chart-0.14.3.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/nvidia-device-plugin https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/nvidia-device-plugin-0.14.2.tgz
-    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/nvidia-gpu-feature-discovery https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/gpu-feature-discovery-0.8.2.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/nvidia-dcgm-exporter https://github.com/robolaunch/on-premise/releases/download/0.1.2-prerelease.10/dcgm-exporter-3.2.0.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/cert-manager https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/cert-manager-v1.12.4.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/ingress-nginx https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/ingress-nginx-4.7.1.tgz
@@ -291,14 +287,6 @@ metadata:
   name: nvidia
 handler: nvidia
 EOF
-}
-install_gpu_feature_discovery () {
-    helm upgrade --install \
-      nfd $DIR_PATH/nvidia-gpu-feature-discovery/gpu-feature-discovery-0.8.2.tgz \
-      --namespace gpu-feature-discovery \
-      --create-namespace \
-      --set runtimeClassName=nvidia \
-      --set migStrategy=$MIG_STRATEGY
 }
 install_nvidia_device_plugin () {
     echo "image:
@@ -672,15 +660,13 @@ print_global_log "Installing proxy-ingress...";
 (install_proxy_ingress)
 print_global_log "Installing NVIDIA runtime...";
 (install_nvidia_runtime_class)
-print_global_log "Installing GPU feature discovery...";
-(install_gpu_feature_discovery)
 print_global_log "Installing NVIDIA device plugin...";
 (install_nvidia_device_plugin)
 print_global_log "Installing robolaunch Operator Suite...";
 (install_operator_suite)
 print_global_log "Deploying MetricsExporter namespace...";
 (deploy_metrics_namespace)
-print_global_log "Installing NVIDIA DCGM exporter...";
-(install_nvidia_dcgm_exporter)
+# print_global_log "Installing NVIDIA DCGM exporter...";
+# (install_nvidia_dcgm_exporter)
 print_global_log "Deploying MetricsExporter...";
 (deploy_metrics_exporter)
