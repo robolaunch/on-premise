@@ -646,6 +646,8 @@ kind: MetricsExporter
 metadata:
   name: rl-metrics
   namespace: rl-metrics
+  labels:
+    robolaunch.io/cloud-instance: $CLOUD_INSTANCE
 spec:
   gpu:
     track: true
