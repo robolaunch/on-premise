@@ -589,7 +589,7 @@ install_operator_suite () {
   kubeRbacProxy:
     image:
       repository: quay.io/robolaunchio/kube-rbac-proxy
-      tag: v0.13.0
+      tag: v0.14.0
   manager:
     image:
       repository: quay.io/robolaunchio/robot-controller-manager
