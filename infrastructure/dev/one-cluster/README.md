@@ -11,4 +11,6 @@ export root_domain=robolaunch.internal
 export github_pat=<GITHUB-PERSONAL-ACCESS-TOKEN>
 export mig_strategy=mixed # optional
 export available_mig_instance=mig-1g.6gb # optional
+export tz_continent=Europe # optional
+export tz_city=Istanbul # optional
 ```
