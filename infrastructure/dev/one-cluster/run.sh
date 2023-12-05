@@ -38,6 +38,8 @@ OIDC_ORGANIZATION_CLIENT_SECRET=$org_client_secret
 COOKIE_SECRET=MFlZN1J5eitIdUplckJLaW55YlF6UjVlQ3lneFJBcEU=
 DOMAIN=$root_domain
 SERVER_URL=$CLOUD_INSTANCE_ALIAS.$DOMAIN
+TZ_CONTINENT=$tz_continent
+TZ_CITY=$tz_city
 GITHUB_PATH=$github_pat
 if [[ -z "${available_mig_instance}" ]]; then
     print_log "Skipping MIG configuration..."
@@ -255,6 +257,8 @@ label_node () {
       robolaunch.io/cloud-instance=$CLOUD_INSTANCE \
       robolaunch.io/cloud-instance-alias=$CLOUD_INSTANCE_ALIAS \
       robolaunch.io/mig-instance-type=$MIG_INSTANCE_TYPE \
+      robolaunch.io/tz-continent=$TZ_CONTINENT \
+      robolaunch.io/tz-city=$TZ_CITY \
       submariner.io/gateway="true";
 }
 install_openebs () {
