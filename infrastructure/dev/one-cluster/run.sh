@@ -37,6 +37,7 @@ OIDC_ORGANIZATION_CLIENT_SECRET=$org_client_secret
 COOKIE_SECRET=MFlZN1J5eitIdUplckJLaW55YlF6UjVlQ3lneFJBcEU=
 DOMAIN=$root_domain
 SERVER_URL=$CLOUD_INSTANCE.$DOMAIN
+SELF_SIGNED_CERT=$self_signed_cert
 TZ_CONTINENT=$tz_continent
 TZ_CITY=$tz_city
 GITHUB_PATH=$github_pat
@@ -212,6 +213,14 @@ curl -vk --resolve \$wan_ip:6443:127.0.0.1 https://\$wan_ip:6443/ping" > $DIR_PA
 	cp  $DIR_PATH/start_script.sh /var/lib/cloud/scripts/per-boot/initial-script.sh
 }
 set_up_k3s () {
+    CERT_ARG=""
+    
+    if [[ -z "${SELF_SIGNED_CERT}" ]]; then
+        CERT_ARG="";
+    else
+        CERT_ARG="--kube-apiserver-arg oidc-ca-file=/root/ca.crt"
+    fi
+
     curl -sfL https://get.k3s.io | \
         INSTALL_K3S_VERSION=$K3S_VERSION+k3s1 \
         K3S_KUBECONFIG_MODE="644" \
@@ -233,8 +242,7 @@ set_up_k3s () {
             oidc-username-claim=preferred_username \
           --kube-apiserver-arg \
             oidc-groups-claim=groups \
-          --kube-apiserver-arg \
-            oidc-ca-file=/root/ca.crt" sh -;
+          $CERT_ARG" sh -;
     sleep 5;
 }
 check_cluster () {
