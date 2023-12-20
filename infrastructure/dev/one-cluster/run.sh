@@ -4,7 +4,7 @@ set -e;
 ARCH=$(dpkg --print-architecture);
 TIMESTAMP=$(date +%s);
 DIR=robolaunch
-DIR_PATH=~/$DIR
+DIR_PATH=/root/$DIR
 mkdir -p $DIR_PATH;
 OUTPUT_FILE="$DIR/out_$TIMESTAMP.log";
 touch $OUTPUT_FILE;
