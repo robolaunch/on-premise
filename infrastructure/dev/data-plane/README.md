@@ -11,6 +11,7 @@ export identity_subdomain=aws-robolaunch-server
 export root_domain=robolaunch.internal
 export org_client_secret=lMVe8sMXCdv6KxOTwHrVcJon9r5kRyKy
 export github_pat=<GITHUB-PERSONAL-ACCESS-TOKEN>
+export self_signed_cert=true # optional
 export mig_strategy=mixed # optional
 export available_mig_instance=mig-1g.6gb # optional
 export tz_continent=Europe # optional
