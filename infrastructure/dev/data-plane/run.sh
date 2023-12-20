@@ -3,10 +3,9 @@ set -e;
 
 ARCH=$(dpkg --print-architecture);
 TIMESTAMP=$(date +%s);
-DIR=robolaunch
-DIR_PATH=/root/$DIR
+DIR_PATH=/root/robolaunch
 mkdir -p $DIR_PATH;
-OUTPUT_FILE="$DIR/out_$TIMESTAMP.log";
+OUTPUT_FILE="$DIR_PATH/out_$TIMESTAMP.log";
 touch $OUTPUT_FILE;
 
 exec 3>&1 >$OUTPUT_FILE 2>&1;
@@ -319,7 +318,7 @@ sharing:
     helm upgrade -i nvdp $DIR_PATH/nvidia-device-plugin/nvidia-device-plugin-0.14.2.tgz \
     --namespace nvidia-device-plugin \
     --create-namespace \
-    --set-file config.map.config=$DIR/nvidia-device-plugin/config.yaml \
+    --set-file config.map.config=$DIR_PATH/nvidia-device-plugin/config.yaml \
     --set runtimeClassName=nvidia \
     -f $DIR_PATH/nvidia-device-plugin/values.yaml;
 }
