@@ -726,7 +726,7 @@ print_global_log "Installing robolaunch Operator Suite...";
 (install_operator_suite)
 print_global_log "Deploying MetricsExporter namespace...";
 (deploy_metrics_namespace)
-# print_global_log "Installing NVIDIA DCGM exporter...";
-# (install_nvidia_dcgm_exporter)
+print_global_log "Installing NVIDIA DCGM exporter...";
+(install_nvidia_dcgm_exporter)
 print_global_log "Deploying MetricsExporter...";
 (deploy_metrics_exporter)
