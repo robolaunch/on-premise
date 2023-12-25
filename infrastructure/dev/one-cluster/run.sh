@@ -249,11 +249,17 @@ check_cluster () {
     check_api_server_url;
     check_cluster_cidr;
     check_service_cidr;
-    set_public_ip
+    set_public_ip;
     curl -vk --resolve $PUBLIC_IP:6443:127.0.0.1  https://$PUBLIC_IP:6443/ping;
-	  cp /etc/rancher/k3s/k3s.yaml $DIR_PATH/k3s.yaml
-	  chmod 777 $DIR_PATH/k3s.yaml
-    sleep 3;
+	  cp /etc/rancher/k3s/k3s.yaml $DIR_PATH/k3s.yaml;
+	  chmod 777 $DIR_PATH/k3s.yaml;
+    READY_NODE_COUNT="0";
+    while [ "$READY_NODE_COUNT" = "0" ]
+    do
+        echo "no node found";
+        sleep 3;
+        READY_NODE_COUNT=$(kubectl get nodes | grep "Ready" | wc -l);
+    done
 }
 label_node () {
     check_node_name;
