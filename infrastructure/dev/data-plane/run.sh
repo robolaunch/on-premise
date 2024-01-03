@@ -254,7 +254,7 @@ check_cluster () {
 	  cp /etc/rancher/k3s/k3s.yaml $DIR_PATH/k3s.yaml;
 	  chmod 777 $DIR_PATH/k3s.yaml;
     READY_NODE_COUNT="0";
-    while [ "$READY_NODE_COUNT" = "0" ]
+    while [ "$READY_NODE_COUNT" != "1" ]
     do
         echo "no node found";
         sleep 3;
