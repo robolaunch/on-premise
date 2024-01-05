@@ -159,10 +159,20 @@ check_if_root () {
 wait_for_apt_db_lock () {
     while [ "$?" -ne 0 ]
     do
-        echo "waiting for apt database lock";
+        echo -n "waiting for apt database lock";
         sleep 3;
         apt-get check >/dev/null 2>&1;
     done
+}
+configuring_ssh () {
+    SSHD_CONFIG_PATH="/etc/ssh/sshd_config";
+    if grep -q "PubkeyAcceptedKeyTypes=+ssh-rsa" "$SSHD_CONFIG_PATH";
+    then
+        echo -n "skipping configuring SSH since it's already configured";
+    else
+        echo -n "PubkeyAcceptedKeyTypes=+ssh-rsa" >> $SSHD_CONFIG_PATH;
+        service sshd restart;
+    fi
 }
 create_directories () {
     mkdir -p $DIR_PATH/coredns;
@@ -264,7 +274,7 @@ check_cluster () {
     READY_NODE_COUNT="0";
     while [ "$READY_NODE_COUNT" != "1" ]
     do
-        echo "no node found";
+        echo -n "no node found";
         sleep 3;
         READY_NODE_COUNT=$(kubectl get nodes | grep "Ready" | wc -l);
     done
@@ -694,6 +704,8 @@ print_global_log "Waiting for the preflight checks...";
 (check_if_root)
 print_global_log "Waiting for the apt database lock...";
 (wait_for_apt_db_lock)
+print_global_log "Configuring remote SSH connection...";
+(configuring_ssh)
 (install_pre_tools)
 (get_versioning_map)
 sleep 3
