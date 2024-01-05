@@ -156,6 +156,14 @@ check_if_root () {
         print_err "You should switch to root using \"sudo -i\" before setup."
     fi
 }
+wait_for_apt_db_lock () {
+    while [ "$?" -ne 0 ]
+    do
+        echo "waiting for apt database lock";
+        sleep 3;
+        apt-get check >/dev/null 2>&1;
+    done
+}
 create_directories () {
     mkdir -p $DIR_PATH/coredns;
     mkdir -p $DIR_PATH/metrics-server;
@@ -684,6 +692,8 @@ EOF
 
 print_global_log "Waiting for the preflight checks...";
 (check_if_root)
+print_global_log "Waiting for the apt database lock...";
+(wait_for_apt_db_lock)
 (install_pre_tools)
 (get_versioning_map)
 sleep 3
