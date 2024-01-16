@@ -217,11 +217,12 @@ federate_metrics_exporter () {
 deploy_connection_hub () {
     check_cluster
     wget -P $DIR_PATH $CONNECTION_HUB_RESOURCE_URL;
-    yq e -i ".metadata.labels.\"robolaunch.io/cloud-instance\" = \"$CLOUD_INSTANCE\"" ch-ci.yaml;
-    yq e -i ".metadata.labels.\"robolaunch.io/cloud-instance-alias\" = \"$CLOUD_INSTANCE_ALIAS\"" ch-ci.yaml;
-    yq e -i ".spec.submarinerSpec.apiServerURL = \"$CLOUD_INSTANCE_API_SERVER_URL\"" ch-ci.yaml;
-    yq e -i ".spec.submarinerSpec.clusterCIDR = \"$CLOUD_INSTANCE_CLUSTER_CIDR\"" ch-ci.yaml;
-    yq e -i ".spec.submarinerSpec.serviceCIDR = \"$CLOUD_INSTANCE_SERVICE_CIDR\"" ch-ci.yaml;
+    CH_PATH=$DIR_PATH/ch-ci.yaml;
+    yq e -i ".metadata.labels.\"robolaunch.io/cloud-instance\" = \"$CLOUD_INSTANCE\"" $CH_PATH;
+    yq e -i ".metadata.labels.\"robolaunch.io/cloud-instance-alias\" = \"$CLOUD_INSTANCE_ALIAS\"" $CH_PATH;
+    yq e -i ".spec.submarinerSpec.apiServerURL = \"$CLOUD_INSTANCE_API_SERVER_URL\"" $CH_PATH;
+    yq e -i ".spec.submarinerSpec.clusterCIDR = \"$CLOUD_INSTANCE_CLUSTER_CIDR\"" $CH_PATH;
+    yq e -i ".spec.submarinerSpec.serviceCIDR = \"$CLOUD_INSTANCE_SERVICE_CIDR\"" $CH_PATH;
     
     CH_INSTALL_SUCCEEDED="false"
     while [ "$CH_INSTALL_SUCCEEDED" != "true" ]
@@ -231,7 +232,6 @@ deploy_connection_hub () {
         sleep 3;
     done
 
-    rm -rf ch-ci.yaml
     check_connection_hub_phase;
 }
 check_connection_hub_phase () {
