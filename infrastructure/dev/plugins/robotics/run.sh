@@ -228,7 +228,7 @@ deploy_connection_hub () {
     while [ "$CH_INSTALL_SUCCEEDED" != "true" ]
     do 
         CH_INSTALL_SUCCEEDED="true"
-        kubectl apply -f -P $DIR_PATH/ch-ci.yaml || CH_INSTALL_SUCCEEDED="false";
+        kubectl apply -f $CH_PATH || CH_INSTALL_SUCCEEDED="false";
         sleep 3;
     done
 
