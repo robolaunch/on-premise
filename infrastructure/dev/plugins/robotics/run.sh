@@ -174,6 +174,9 @@ label_node () {
     kubectl label --overwrite=true node $NODE_NAME \
       robolaunch.io/robotics-plugin="true";
 }
+add_helm_repositories () {
+    helm repo add robolaunch https://robolaunch.github.io/charts;
+}
 install_operator_suite () {
 
     # deploying connection hub operator
@@ -273,6 +276,8 @@ print_global_log "Checking cluster health...";
 (check_cluster)
 print_global_log "Labeling node...";
 (label_node)
+print_global_log "Adding Helm repositories...";
+(add_helm_repositories)
 print_global_log "Installing robolaunch Operator Suite...";
 (install_operator_suite)
 print_global_log "Deploying Connection Hub...";
