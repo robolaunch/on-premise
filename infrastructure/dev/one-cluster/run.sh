@@ -146,6 +146,11 @@ check_inputs () {
 get_versioning_map () {
     wget -P $DIR_PATH https://raw.githubusercontent.com/robolaunch/robolaunch/main/platform.yaml;
 }
+make_life_more_beautiful () {
+    echo "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> ~/.bashrc;
+    echo "export KUBE_EDITOR=nano" >> ~/.bashrc;
+    echo "alias k=\"kubectl\"" >> ~/.bashrc;
+}
 opening () {
     apt-get update 2>/dev/null 1>/dev/null;
     apt-get install -y figlet 2>/dev/null 1>/dev/null; 
@@ -708,6 +713,7 @@ print_global_log "Configuring remote SSH connection...";
 (configuring_ssh)
 (install_pre_tools)
 (get_versioning_map)
+(make_life_more_beautiful)
 sleep 3
 if [[ -z "${PLATFORM_VERSION}" ]]; then
     PLATFORM_VERSION=$(yq '.versions[0].version' < $DIR_PATH/platform.yaml)
