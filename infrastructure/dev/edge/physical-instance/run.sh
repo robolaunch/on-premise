@@ -1,16 +1,5 @@
 #!/bin/bash
 
-# ORGANIZATION=rls-doo \
-# TEAM=team-cloudy \
-# REGION=eu-east-2 \
-# CLOUD_INSTANCE=robot-cloud-02 \
-# CLOUD_INSTANCE_ALIAS=instance-1 \
-# PHYSICAL_INSTANCE=robot-cloudy-01 \
-# DESIRED_CLUSTER_CIDR=10.20.1.0/24 \
-# DESIRED_SERVICE_CIDR=10.20.2.0/24 \
-# NETWORK=External \
-# ./run.sh
-
 set -e;
 
 BLUE='\033[0;34m';
@@ -18,11 +7,13 @@ GREEN='\033[0;32m';
 RED='\033[0;31m';
 NC='\033[0m';
 
-ARCH=$(dpkg --print-architecture)
-TIMESTAMP=$(date +%s)
-OUTPUT_FILE="out_$TIMESTAMP.log"
+ARCH=$(dpkg --print-architecture);
+TIMESTAMP=$(date +%s);
+DIR_PATH=/root/robolaunch;
+mkdir -p $DIR_PATH;
+OUTPUT_FILE="$DIR_PATH/out_$TIMESTAMP.log";
+touch $OUTPUT_FILE;
 
-export KUBECONFIG="/etc/rancher/k3s/k3s.yaml";
 exec 3>&1 >$OUTPUT_FILE 2>&1;
 
 print_global_log () {
@@ -37,6 +28,10 @@ print_err () {
     echo -e "${RED}Error: $1${NC}" >&3;
     exit 1;
 }
+
+GITHUB_PATH=$github_pat
+
+export KUBECONFIG="/etc/rancher/k3s/k3s.yaml";
 
 set_cluster_root_domain () {
     CLUSTER_ROOT_DOMAIN=$(kubectl get cm coredns -n kube-system -o jsonpath="{.data.Corefile}" \
@@ -276,6 +271,57 @@ update_helm_repositories () {
     helm repo update;
 }
 
+create_directories () {
+    mkdir -p $DIR_PATH/coredns;
+
+    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/coredns https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/coredns-1.24.5.tgz
+}
+
+install_coredns () {
+    echo "image:
+  repository: coredns/coredns
+  tag: 1.10.1
+service:
+  clusterIP: 10.200.2.10
+servers:
+- zones:
+  - zone: .
+  port: 53
+  plugins:
+  - name: errors
+  - name: health
+    configBlock: |-
+      lameduck 5s
+  - name: ready
+  - name: kubernetes
+    parameters: $PHYSICAL_INSTANCE.local in-addr.arpa ip6.arpa
+    configBlock: |-
+      pods insecure
+      fallthrough in-addr.arpa ip6.arpa
+      ttl 30
+  - name: hosts
+    parameters: /etc/coredns/NodeHosts
+    configBlock: |-
+      ttl 60
+      reload 15s
+      fallthrough
+  - name: prometheus
+    parameters: 0.0.0.0:9153
+  - name: forward
+    parameters: . /etc/resolv.conf
+  - name: cache
+    parameters: 30
+  - name: loop
+  - name: reload
+  - name: loadbalance" > $DIR_PATH/coredns/values.yaml
+	helm upgrade --install \
+      coredns $DIR_PATH/coredns/coredns-1.24.5.tgz \
+      --namespace coredns \
+      --create-namespace \
+      -f $DIR_PATH/coredns/values.yaml
+	sleep 2;
+}
+
 install_openebs () {
     print_log "Installing openebs... This might take around one minute.";
     helm upgrade -i openebs openebs/openebs \
@@ -484,6 +530,9 @@ FLEET_OPERATOR_CHART_VERSION=$(yq ''"${VERSION_SELECTOR_STR}"' | .roboticsCloud.
 opening >&3
 (check_inputs)
 
+print_global_log "Creating directories...";
+(create_directories)
+
 print_global_log "Installing tools...";
 (install_post_tools)
 
@@ -498,6 +547,9 @@ print_global_log "Labeling node...";
 
 print_global_log "Updating Helm repositories...";
 (update_helm_repositories)
+
+print_global_log "Installing CoreDNS...";
+(install_coredns)
 
 print_global_log "Creating admin crb...";
 (create_admin_crb)
