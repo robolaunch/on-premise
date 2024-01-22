@@ -240,6 +240,8 @@ set_up_k3s () {
             --disable-network-policy \
             --disable=traefik \
             --disable=local-storage \
+            --disable=coredns \
+            --disable=metrics-server \
             --kube-apiserver-arg oidc-issuer-url=$OIDC_URL \
             --kube-apiserver-arg oidc-client-id=$OIDC_ORGANIZATION_CLIENT_ID \
             --kube-apiserver-arg oidc-username-claim=preferred_username \
