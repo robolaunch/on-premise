@@ -700,6 +700,37 @@ spec:
     - $DEFAULT_NETWORK_INTERFACE
 EOF
 }
+set_up_file_manager () {
+    FILEBROWSER_CONFIG_PATH=/etc/robolaunch/filebrowser;
+    
+    curl -fsSL https://raw.githubusercontent.com/tunahanertekin/filebrowser/master/get.sh | bash;
+    mkdir -p /etc/robolaunch/services ${FILEBROWSER_CONFIG_PATH} /var/log/services/vdi;
+    git clone https://github.com/robolaunch/file-manager-config ${FILEBROWSER_CONFIG_PATH}/filebrowser-config;
+
+    filebrowser config init -d ${FILEBROWSER_CONFIG_PATH}/filebrowser-host.db;
+    filebrowser users add admin admin -d ${FILEBROWSER_CONFIG_PATH}/filebrowser-host.db;
+    filebrowser config set --auth.method=noauth -d ${FILEBROWSER_CONFIG_PATH}/filebrowser-host.db;
+    filebrowser config set --branding.name "robolaunch" \
+        --branding.files ${FILEBROWSER_CONFIG_PATH}"/filebrowser-config/branding" \
+        --branding.disableExternal \
+        -d ${FILEBROWSER_CONFIG_PATH}/filebrowser-host.db;
+      
+    chmod 1777 ${FILEBROWSER_CONFIG_PATH}/filebrowser-host.db /var/log/services ${FILEBROWSER_CONFIG_PATH}/filebrowser-config/;
+    chown $USER ${FILEBROWSER_CONFIG_PATH}/filebrowser-host.db /var/log/services ${FILEBROWSER_CONFIG_PATH}/filebrowser-config/;
+
+    echo "[Unit]
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/filebrowser -a 0.0.0.0 -p 2000 -d /etc/robolaunch/filebrowser/filebrowser-host.db -r /
+
+[Install]
+WantedBy=default.target" > /etc/systemd/system/filebrowser.service;
+    chmod 664 /etc/systemd/system/filebrowser.service;
+    systemctl daemon-reload;
+    systemctl enable filebrowser.service;
+    systemctl start filebrowser.service;
+}
 
 ##############################################################
 ##############################################################
@@ -772,3 +803,5 @@ print_global_log "Installing NVIDIA DCGM exporter...";
 (install_nvidia_dcgm_exporter)
 print_global_log "Deploying MetricsExporter...";
 (deploy_metrics_exporter)
+print_global_log "Setting up file manager...";
+(set_up_file_manager)
