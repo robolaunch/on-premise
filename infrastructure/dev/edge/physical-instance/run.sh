@@ -292,8 +292,7 @@ create_directories () {
 
 install_coredns () {
     set_desired_service_cidr;
-    COREDNS_SERVICE_CLUSTER_IP_TMP="${DESIRED_SERVICE_CIDR%.*}";
-    COREDNS_SERVICE_CLUSTER_IP="${COREDNS_SERVICE_CLUSTER_IP_TMP%.*}.2.10";
+    COREDNS_SERVICE_CLUSTER_IP="${DESIRED_SERVICE_CIDR%.*}.10";
     echo "image:
   repository: coredns/coredns
   tag: 1.10.1
