@@ -187,6 +187,12 @@ get_versioning_map () {
     wget https://raw.githubusercontent.com/robolaunch/robolaunch/main/platform.yaml;
 }
 
+make_life_more_beautiful () {
+    echo "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> ~/.bashrc;
+    echo "export KUBE_EDITOR=nano" >> ~/.bashrc;
+    echo "alias k=\"kubectl\"" >> ~/.bashrc;
+}
+
 opening () {
     apt-get update 2>/dev/null 1>/dev/null;
     apt-get install -y figlet 2>/dev/null 1>/dev/null; 
@@ -515,6 +521,7 @@ print_global_log "Waiting for the preflight checks...";
 (check_if_root)
 (install_pre_tools)
 (get_versioning_map)
+(make_life_more_beautiful)
 
 # Specifying platform & component versions
 if [[ -z "${PLATFORM_VERSION}" ]]; then
