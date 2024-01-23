@@ -291,7 +291,7 @@ create_directories () {
 }
 
 install_coredns () {
-    set_desired_cluster_cidr;
+    set_desired_service_cidr;
     COREDNS_SERVICE_CLUSTER_IP="${DESIRED_SERVICE_CIDR%.*}.2";
     echo "image:
   repository: coredns/coredns
