@@ -284,11 +284,13 @@ create_directories () {
 }
 
 install_coredns () {
+    set_desired_cluster_cidr;
+    COREDNS_CLUSTER_IP="${DESIRED_CLUSTER_CIDR%.*}.2";
     echo "image:
   repository: coredns/coredns
   tag: 1.10.1
 service:
-  clusterIP: 10.200.2.10
+  clusterIP: $COREDNS_CLUSTER_IP
 servers:
 - zones:
   - zone: .
