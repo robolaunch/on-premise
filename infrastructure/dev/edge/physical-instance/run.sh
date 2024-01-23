@@ -253,6 +253,13 @@ set_up_k3s () {
 check_cluster () {
     check_cluster_cidr;
     check_service_cidr;
+    READY_NODE_COUNT="0";
+    while [ "$READY_NODE_COUNT" != "1" ]
+    do
+        echo -n "no node found";
+        sleep 3;
+        READY_NODE_COUNT=$(kubectl get nodes | grep "Ready" | wc -l);
+    done
 }
 
 label_node () {
