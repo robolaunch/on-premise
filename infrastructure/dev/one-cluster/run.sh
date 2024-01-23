@@ -716,7 +716,7 @@ set_up_file_manager () {
         -d ${FILEBROWSER_CONFIG_PATH}/filebrowser-host.db;
       
     chmod 1777 ${FILEBROWSER_CONFIG_PATH}/filebrowser-host.db /var/log/services ${FILEBROWSER_CONFIG_PATH}/filebrowser-config/;
-    chown $USER ${FILEBROWSER_CONFIG_PATH}/filebrowser-host.db /var/log/services ${FILEBROWSER_CONFIG_PATH}/filebrowser-config/;
+    chown root ${FILEBROWSER_CONFIG_PATH}/filebrowser-host.db /var/log/services ${FILEBROWSER_CONFIG_PATH}/filebrowser-config/;
 
     echo "[Unit]
 After=network.target
