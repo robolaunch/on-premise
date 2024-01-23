@@ -297,7 +297,7 @@ install_coredns () {
   repository: coredns/coredns
   tag: 1.10.1
 service:
-  clusterIP: $COREDNS_CLUSTER_IP
+  clusterIP: $COREDNS_SERVICE_CLUSTER_IP
 servers:
 - zones:
   - zone: .
