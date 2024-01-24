@@ -189,6 +189,7 @@ create_directories () {
     mkdir -p $DIR_PATH/ingress-nginx;
     mkdir -p $DIR_PATH/oauth2-proxy;
     mkdir -p $DIR_PATH/robot-operator;
+    mkdir -p $DIR_PATH/filemanager;
 
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/coredns https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/coredns-1.24.5.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/metrics-server https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/metrics-server-3.11.0.tgz
@@ -199,6 +200,7 @@ create_directories () {
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/ingress-nginx https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/ingress-nginx-4.7.1.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/oauth2-proxy https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/oauth2-proxy-6.17.0.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/robot-operator https://github.com/robolaunch/charts/releases/download/robot-operator-$ROBOT_OPERATOR_CHART_VERSION/robot-operator-$ROBOT_OPERATOR_CHART_VERSION.tgz
+    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/filemanager https://github.com/robolaunch/on-premise/releases/download/0.1.2-prerelease.10/filebrowser-relay-resources.yaml
 }
 install_pre_tools () {
     print_log "Installing Tools...";
@@ -730,6 +732,10 @@ WantedBy=default.target" > /etc/systemd/system/filebrowser.service;
     systemctl daemon-reload;
     systemctl enable filebrowser.service;
     systemctl start filebrowser.service;
+
+    # deploy kubernetes resources for filebrowser relay
+    sed -i "s/<CLOUD-INSTANCE>/$CLOUD_INSTANCE/g" $DIR_PATH/filemanager/filebrowser-relay-resources.yaml;
+    kubectl apply -f $DIR_PATH/filemanager/filebrowser-relay-resources.yaml;
 }
 
 ##############################################################
