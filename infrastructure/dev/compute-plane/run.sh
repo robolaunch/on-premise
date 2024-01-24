@@ -724,7 +724,7 @@ set_up_file_manager () {
 After=network.target
 
 [Service]
-ExecStart=/usr/local/bin/filebrowser -b host -a 127.0.0.1 -p 2500 -d /etc/robolaunch/filebrowser/filebrowser-host.db -r /
+ExecStart=/usr/local/bin/filebrowser -b /host -a 127.0.0.1 -p 2500 -d /etc/robolaunch/filebrowser/filebrowser-host.db -r /
 
 [Install]
 WantedBy=default.target" > /etc/systemd/system/filebrowser.service;
