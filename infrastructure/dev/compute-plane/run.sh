@@ -735,7 +735,7 @@ WantedBy=default.target" > /etc/systemd/system/filebrowser.service;
 
     # deploy kubernetes resources for filebrowser relay
     sed -i "s/<CLOUD-INSTANCE>/$CLOUD_INSTANCE/g" $DIR_PATH/filemanager/filebrowser-relay-resources.yaml;
-    sed -i "s/<ROOT-DOMAIN>/$DOMAIN/g" $DIR_PATH/filemanager/filebrowser-relay-resources.yaml;
+    sed -i "s/<ROOT-DNS>/$DOMAIN/g" $DIR_PATH/filemanager/filebrowser-relay-resources.yaml;
     kubectl apply -f $DIR_PATH/filemanager/filebrowser-relay-resources.yaml;
 }
 
