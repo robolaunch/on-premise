@@ -153,7 +153,7 @@ make_life_more_beautiful () {
 }
 opening () {
     apt-get update 2>/dev/null 1>/dev/null;
-    apt-get install -y figlet 2>/dev/null 1>/dev/null; 
+    apt-get install -y figlet 2>/dev/null 1>/dev/null;
     figlet 'robolaunch' -f slant;
 }
 check_if_root () {
@@ -239,7 +239,7 @@ curl -vk --resolve \$wan_ip:6443:127.0.0.1 https://\$wan_ip:6443/ping" > $DIR_PA
 }
 set_up_k3s () {
     CERT_ARG=""
-    
+
     if [[ -z "${SELF_SIGNED_CERT}" ]]; then
         CERT_ARG="";
     else
@@ -256,7 +256,6 @@ set_up_k3s () {
           --disable-network-policy \
           --disable=traefik \
           --disable=local-storage \
-          --disable=coredns \
           --disable=metrics-server \
           --pause-image=quay.io/robolaunchio/mirrored-pause:3.6 \
           --kube-apiserver-arg \
@@ -418,33 +417,33 @@ create_admin_crb () {
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: $ORGANIZATION-admin-role
-rules:                                                                                                                                                                                                    
-- apiGroups:         
-  - '*'              
-  resources:         
-  - nodes            
-  - namespaces       
-  - metricsexporters 
-  - secrets          
-  - roles            
-  - rolebindings     
-  - pods             
-  verbs:             
-  - get              
-  - list             
-- apiGroups:         
-  - '*'              
-  resources:         
-  - secrets          
-  - namespaces       
-  verbs:             
-  - create           
-- apiGroups:         
-  - '*'              
-  resources:         
-  - roles            
-  - rolebindings     
-  verbs:             
+rules:
+- apiGroups:
+  - '*'
+  resources:
+  - nodes
+  - namespaces
+  - metricsexporters
+  - secrets
+  - roles
+  - rolebindings
+  - pods
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - '*'
+  resources:
+  - secrets
+  - namespaces
+  verbs:
+  - create
+- apiGroups:
+  - '*'
+  resources:
+  - roles
+  - rolebindings
+  verbs:
   - create
   - bind
   - escalate
@@ -620,7 +619,7 @@ spec:
   ingressClassName: nginx" > proxy-ingress.yaml
     PROXY_INGRESS_INSTALL_SUCCEEDED="false"
     while [ "$PROXY_INGRESS_INSTALL_SUCCEEDED" != "true" ]
-    do 
+    do
         PROXY_INGRESS_INSTALL_SUCCEEDED="true"
         	kubectl create -f proxy-ingress.yaml || PROXY_INGRESS_INSTALL_SUCCEEDED="false";
         sleep 1;
@@ -639,7 +638,7 @@ install_operator_suite () {
       tag: v$ROBOT_OPERATOR_CHART_VERSION" > $DIR_PATH/robot-operator/values.yaml;
     RO_HELM_INSTALL_SUCCEEDED="false"
     while [ "$RO_HELM_INSTALL_SUCCEEDED" != "true" ]
-    do 
+    do
         RO_HELM_INSTALL_SUCCEEDED="true"
         helm upgrade -i \
             robot-operator $DIR_PATH/robot-operator/robot-operator-$ROBOT_OPERATOR_CHART_VERSION.tgz \
@@ -704,7 +703,7 @@ EOF
 }
 set_up_file_manager () {
     FILEBROWSER_CONFIG_PATH=/etc/robolaunch/filebrowser;
-    
+
     curl -fsSL https://raw.githubusercontent.com/tunahanertekin/filebrowser/master/get.sh | bash;
     mkdir -p /etc/robolaunch/services ${FILEBROWSER_CONFIG_PATH} /var/log/services/vdi;
     git clone https://github.com/robolaunch/file-manager-config ${FILEBROWSER_CONFIG_PATH}/filebrowser-config;
@@ -716,7 +715,7 @@ set_up_file_manager () {
         --branding.files ${FILEBROWSER_CONFIG_PATH}"/filebrowser-config/branding" \
         --branding.disableExternal \
         -d ${FILEBROWSER_CONFIG_PATH}/filebrowser-host.db;
-      
+
     chmod 1777 ${FILEBROWSER_CONFIG_PATH}/filebrowser-host.db /var/log/services ${FILEBROWSER_CONFIG_PATH}/filebrowser-config/;
     chown root ${FILEBROWSER_CONFIG_PATH}/filebrowser-host.db /var/log/services ${FILEBROWSER_CONFIG_PATH}/filebrowser-config/;
 
@@ -784,8 +783,8 @@ print_global_log "Creating admin crb...";
 (create_admin_crb)
 print_global_log "Creating super admin crb...";
 (create_super_admin_crb)
-print_global_log "Installing coredns...";
-(install_coredns)
+# print_global_log "Installing coredns...";
+# (install_coredns)
 print_global_log "Installing metrics-server...";
 (install_metrics_server)
 print_global_log "Installing ingress...";

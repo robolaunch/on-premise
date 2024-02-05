@@ -241,7 +241,6 @@ set_up_k3s () {
             --disable-network-policy \
             --disable=traefik \
             --disable=local-storage \
-            --disable=coredns \
             --disable=metrics-server \
             --kube-apiserver-arg oidc-issuer-url=$OIDC_URL \
             --kube-apiserver-arg oidc-client-id=$OIDC_ORGANIZATION_CLIENT_ID \
@@ -564,8 +563,8 @@ print_global_log "Labeling node...";
 print_global_log "Updating Helm repositories...";
 (update_helm_repositories)
 
-print_global_log "Installing CoreDNS...";
-(install_coredns)
+# print_global_log "Installing CoreDNS...";
+# (install_coredns)
 
 print_global_log "Creating admin crb...";
 (create_admin_crb)
