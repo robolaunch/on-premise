@@ -516,6 +516,20 @@ servers:
       -f $DIR_PATH/coredns/values.yaml
 	sleep 2;
 }
+add_host_entries () {
+    # [Distributed Setup] add host for control plane
+    if [[ -n "${CONTROL_PLANE_HOST_ENTRY}" && ! $(grep -q "$CONTROL_PLANE_HOST_ENTRY" /etc/hosts) ]]; then
+        echo $CONTROL_PLANE_HOST_ENTRY >> /etc/hosts;
+    fi
+    # [Distributed Setup] add host for compute plane
+    if [[ -n "${COMPUTE_PLANE_HOST_ENTRY}" && ! $(grep -q "$COMPUTE_PLANE_HOST_ENTRY" /etc/hosts) ]]; then
+        echo $COMPUTE_PLANE_HOST_ENTRY >> /etc/hosts;
+    fi
+    # [Unified Setup] add host for control & compute plane
+    if [[ -n "${CONTROL_COMPUTE_PLANE_HOST_ENTRY}" && ! $(grep -q "$CONTROL_COMPUTE_PLANE_HOST_ENTRY" /etc/hosts) ]]; then
+        echo $CONTROL_COMPUTE_PLANE_HOST_ENTRY >> /etc/hosts;
+    fi
+}
 install_coredns_as_manifest () {
     # forward to /etc/resolv.conf
     sed -i "s#<COREDNS-FORWARD>#/etc/resolv.conf#g" $DIR_PATH/coredns/coredns.yaml;
@@ -806,6 +820,8 @@ print_global_log "Setting up NVIDIA container runtime...";
 (set_up_nvidia_container_runtime)
 print_global_log "Copying Start Script...";
 (copy_start_script)
+print_global_log "Adding host entries...";
+(add_host_entries)
 print_global_log "Setting up k3s cluster...";
 (set_up_k3s)
 print_global_log "Checking cluster health...";
