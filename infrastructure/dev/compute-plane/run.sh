@@ -41,6 +41,9 @@ SELF_SIGNED_CERT=$self_signed_cert
 TZ_CONTINENT=$tz_continent
 TZ_CITY=$tz_city
 GITHUB_PATH=$github_pat
+CONTROL_PLANE_HOST_ENTRY=$control_plane_host_entry
+COMPUTE_PLANE_HOST_ENTRY=$compute_plane_host_entry
+CONTROL_COMPUTE_PLANE_HOST_ENTRY=$control_compute_plane_host_entry
 if [[ -z "${available_mig_instance}" ]]; then
     print_log "Skipping MIG configuration..."
 else
