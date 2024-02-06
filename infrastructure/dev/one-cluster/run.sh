@@ -516,6 +516,10 @@ servers:
 	sleep 2;
 }
 edit_coredns () {
+    # forward to /etc/resolv.conf
+    sed -i "s#<COREDNS-FORWARD>#/etc/resolv.conf#g" $DIR_PATH/coredns/coredns.yaml;
+    sed -i "s#<CLOUD-INSTANCE>#$CLOUD_INSTANCE#g" $DIR_PATH/coredns/coredns.yaml;
+
     # [Distributed Setup] add host for control plane
     if [[ -z "${CONTROL_PLANE_HOST_ENTRY}" ]]; then
         sed -i '/<CONTROL-PLANE-HOST-ENTRY>/d' $DIR_PATH/coredns/coredns.yaml
@@ -534,8 +538,6 @@ edit_coredns () {
     else
         sed -i "s/<CONTROL-COMPUTE-PLANE-HOST-ENTRY>/$CONTROL_COMPUTE_PLANE_HOST_ENTRY/g" $DIR_PATH/coredns/coredns.yaml;
     fi
-    # forward to /etc/resolv.conf
-    sed -i "s/<COREDNS-FORWARD>//etc/resolv.conf/g" $DIR_PATH/coredns/coredns.yaml;
 
     cp $DIR_PATH/coredns/coredns.yaml /var/lib/rancher/k3s/server/manifests/coredns_override.yaml;
 }
