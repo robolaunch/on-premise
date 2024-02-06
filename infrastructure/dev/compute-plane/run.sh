@@ -28,7 +28,6 @@ REGION=$region_plain
 CLOUD_INSTANCE=$cloud_instance
 CLOUD_INSTANCE_ALIAS=$cloud_instance_alias
 CLUSTER_DOMAIN=$cloud_instance
-PHYSICAL_INSTANCE=$cloud_instance
 DESIRED_CLUSTER_CIDR=10.200.1.0/24
 DESIRED_SERVICE_CIDR=10.200.2.0/24
 OIDC_URL=https://$identity_subdomain.$root_domain/auth/realms/robo-realm
@@ -517,7 +516,28 @@ servers:
 	sleep 2;
 }
 edit_coredns () {
-    
+    # [Distributed Setup] add host for control plane
+    if [[ -z "${CONTROL_PLANE_HOST_ENTRY}" ]]; then
+        sed -i '/<CONTROL-PLANE-HOST-ENTRY>/d' $DIR_PATH/coredns/coredns.yaml
+    else
+        sed -i "s/<CONTROL-PLANE-HOST-ENTRY>/$CONTROL_PLANE_HOST_ENTRY/g" $DIR_PATH/coredns/coredns.yaml;
+    fi
+    # [Distributed Setup] add host for compute plane
+    if [[ -z "${COMPUTE_PLANE_HOST_ENTRY}" ]]; then
+        sed -i '/<COMPUTE-PLANE-HOST-ENTRY>/d' $DIR_PATH/coredns/coredns.yaml
+    else
+        sed -i "s/<COMPUTE-PLANE-HOST-ENTRY>/$COMPUTE_PLANE_HOST_ENTRY/g" $DIR_PATH/coredns/coredns.yaml;
+    fi
+    # [Unified Setup] add host for control & compute plane
+    if [[ -z "${CONTROL_COMPUTE_PLANE_HOST_ENTRY}" ]]; then
+        sed -i '/<CONTROL-COMPUTE-PLANE-HOST-ENTRY>/d' $DIR_PATH/coredns/coredns.yaml
+    else
+        sed -i "s/<CONTROL-COMPUTE-PLANE-HOST-ENTRY>/$CONTROL_COMPUTE_PLANE_HOST_ENTRY/g" $DIR_PATH/coredns/coredns.yaml;
+    fi
+    # forward to /etc/resolv.conf
+    sed -i "s/<COREDNS-FORWARD>//etc/resolv.conf/g" $DIR_PATH/coredns/coredns.yaml;
+
+    cp $DIR_PATH/coredns/coredns.yaml /var/lib/rancher/k3s/server/manifests/coredns_override.yaml;
 }
 install_metrics_server () {
     echo "image:
@@ -795,6 +815,8 @@ print_global_log "Creating super admin crb...";
 (create_super_admin_crb)
 # print_global_log "Installing coredns...";
 # (install_coredns)
+print_global_log "Editing coredns...";
+(edit_coredns)
 print_global_log "Installing metrics-server...";
 (install_metrics_server)
 print_global_log "Installing ingress...";
