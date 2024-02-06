@@ -14,6 +14,14 @@ mkdir -p $DIR_PATH;
 OUTPUT_FILE="$DIR_PATH/out_$TIMESTAMP.log";
 touch $OUTPUT_FILE;
 
+############## Optional Parameters ##############
+TZ_CONTINENT=$tz_continent
+TZ_CITY=$tz_city
+CONTROL_PLANE_HOST_ENTRY=$control_plane_host_entry
+COMPUTE_PLANE_HOST_ENTRY=$compute_plane_host_entry
+CONTROL_COMPUTE_PLANE_HOST_ENTRY=$control_compute_plane_host_entry
+#################################################
+
 exec 3>&1 >$OUTPUT_FILE 2>&1;
 
 print_global_log () {
@@ -272,6 +280,8 @@ label_node () {
         robolaunch.io/cloud-instance=$CLOUD_INSTANCE \
         robolaunch.io/cloud-instance-alias=$CLOUD_INSTANCE_ALIAS \
         robolaunch.io/physical-instance=$PHYSICAL_INSTANCE \
+        robolaunch.io/tz-continent=$TZ_CONTINENT \
+        robolaunch.io/tz-city=$TZ_CITY \
         submariner.io/gateway="true";
 }
 
