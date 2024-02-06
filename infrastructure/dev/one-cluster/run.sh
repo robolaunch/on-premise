@@ -28,7 +28,6 @@ REGION=$region_plain
 CLOUD_INSTANCE=$cloud_instance
 CLOUD_INSTANCE_ALIAS=$cloud_instance_alias
 CLUSTER_DOMAIN=$cloud_instance
-PHYSICAL_INSTANCE=$cloud_instance
 DESIRED_CLUSTER_CIDR=10.200.1.0/24
 DESIRED_SERVICE_CIDR=10.200.2.0/24
 OIDC_URL=https://$identity_subdomain.$root_domain/auth/realms/robo-realm
@@ -37,10 +36,15 @@ OIDC_ORGANIZATION_CLIENT_SECRET=$org_client_secret
 COOKIE_SECRET=MFlZN1J5eitIdUplckJLaW55YlF6UjVlQ3lneFJBcEU=
 DOMAIN=$root_domain
 SERVER_URL=$CLOUD_INSTANCE.$DOMAIN
+GITHUB_PATH=$github_pat
+
+############## Optional Parameters ##############
 SELF_SIGNED_CERT=$self_signed_cert
 TZ_CONTINENT=$tz_continent
 TZ_CITY=$tz_city
-GITHUB_PATH=$github_pat
+CONTROL_PLANE_HOST_ENTRY=$control_plane_host_entry
+COMPUTE_PLANE_HOST_ENTRY=$compute_plane_host_entry
+CONTROL_COMPUTE_PLANE_HOST_ENTRY=$control_compute_plane_host_entry
 if [[ -z "${available_mig_instance}" ]]; then
     print_log "Skipping MIG configuration..."
 else
@@ -51,6 +55,7 @@ if [[ -z "${mig_strategy}" ]]; then
 else
     MIG_STRATEGY=$mig_strategy
 fi
+#################################################
 
 BLUE='\033[0;34m';
 GREEN='\033[0;32m';
@@ -153,7 +158,7 @@ make_life_more_beautiful () {
 }
 opening () {
     apt-get update 2>/dev/null 1>/dev/null;
-    apt-get install -y figlet 2>/dev/null 1>/dev/null; 
+    apt-get install -y figlet 2>/dev/null 1>/dev/null;
     figlet 'robolaunch' -f slant;
 }
 check_if_root () {
@@ -192,6 +197,7 @@ create_directories () {
     mkdir -p $DIR_PATH/filemanager;
 
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/coredns https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/coredns-1.24.5.tgz
+    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/coredns https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/coredns.yaml
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/metrics-server https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/metrics-server-3.11.0.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/openebs https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/openebs-3.8.0.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/nvidia-device-plugin https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/nvidia-device-plugin-0.14.2.tgz
@@ -239,7 +245,7 @@ curl -vk --resolve \$wan_ip:6443:127.0.0.1 https://\$wan_ip:6443/ping" > $DIR_PA
 }
 set_up_k3s () {
     CERT_ARG=""
-    
+
     if [[ -z "${SELF_SIGNED_CERT}" ]]; then
         CERT_ARG="";
     else
@@ -254,9 +260,9 @@ set_up_k3s () {
           --service-cidr=$DESIRED_SERVICE_CIDR \
           --cluster-domain=$CLUSTER_DOMAIN.local \
           --disable-network-policy \
+          --disable=coredns \
           --disable=traefik \
           --disable=local-storage \
-          --disable=coredns \
           --disable=metrics-server \
           --pause-image=quay.io/robolaunchio/mirrored-pause:3.6 \
           --kube-apiserver-arg \
@@ -418,33 +424,33 @@ create_admin_crb () {
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: $ORGANIZATION-admin-role
-rules:                                                                                                                                                                                                    
-- apiGroups:         
-  - '*'              
-  resources:         
-  - nodes            
-  - namespaces       
-  - metricsexporters 
-  - secrets          
-  - roles            
-  - rolebindings     
-  - pods             
-  verbs:             
-  - get              
-  - list             
-- apiGroups:         
-  - '*'              
-  resources:         
-  - secrets          
-  - namespaces       
-  verbs:             
-  - create           
-- apiGroups:         
-  - '*'              
-  resources:         
-  - roles            
-  - rolebindings     
-  verbs:             
+rules:
+- apiGroups:
+  - '*'
+  resources:
+  - nodes
+  - namespaces
+  - metricsexporters
+  - secrets
+  - roles
+  - rolebindings
+  - pods
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - '*'
+  resources:
+  - secrets
+  - namespaces
+  verbs:
+  - create
+- apiGroups:
+  - '*'
+  resources:
+  - roles
+  - rolebindings
+  verbs:
   - create
   - bind
   - escalate
@@ -509,6 +515,46 @@ servers:
       --create-namespace \
       -f $DIR_PATH/coredns/values.yaml
 	sleep 2;
+}
+add_host_entries () {
+    # [Distributed Setup] add host for control plane
+    if [[ -n "${CONTROL_PLANE_HOST_ENTRY}" && $(grep -L "$CONTROL_PLANE_HOST_ENTRY" /etc/hosts) ]]; then
+        sed -i "2i$CONTROL_PLANE_HOST_ENTRY" /etc/hosts;
+    fi
+    # [Distributed Setup] add host for compute plane
+    if [[ -n "${COMPUTE_PLANE_HOST_ENTRY}" && $(grep -L "$COMPUTE_PLANE_HOST_ENTRY" /etc/hosts) ]]; then
+        sed -i "2i$COMPUTE_PLANE_HOST_ENTRY" /etc/hosts;
+    fi
+    # [Unified Setup] add host for control & compute plane
+    if [[ -n "${CONTROL_COMPUTE_PLANE_HOST_ENTRY}" && $(grep -L "$CONTROL_COMPUTE_PLANE_HOST_ENTRY" /etc/hosts) ]]; then
+        sed -i "2i$CONTROL_COMPUTE_PLANE_HOST_ENTRY" /etc/hosts;
+    fi
+}
+install_coredns_as_manifest () {
+    # forward to /etc/resolv.conf
+    sed -i "s#<COREDNS-FORWARD>#/etc/resolv.conf#g" $DIR_PATH/coredns/coredns.yaml;
+    sed -i "s#<CLOUD-INSTANCE>#$CLOUD_INSTANCE#g" $DIR_PATH/coredns/coredns.yaml;
+
+    # [Distributed Setup] add host for control plane
+    if [[ -z "${CONTROL_PLANE_HOST_ENTRY}" ]]; then
+        sed -i '/<CONTROL-PLANE-HOST-ENTRY>/d' $DIR_PATH/coredns/coredns.yaml
+    else
+        sed -i "s/<CONTROL-PLANE-HOST-ENTRY>/$CONTROL_PLANE_HOST_ENTRY/g" $DIR_PATH/coredns/coredns.yaml;
+    fi
+    # [Distributed Setup] add host for compute plane
+    if [[ -z "${COMPUTE_PLANE_HOST_ENTRY}" ]]; then
+        sed -i '/<COMPUTE-PLANE-HOST-ENTRY>/d' $DIR_PATH/coredns/coredns.yaml
+    else
+        sed -i "s/<COMPUTE-PLANE-HOST-ENTRY>/$COMPUTE_PLANE_HOST_ENTRY/g" $DIR_PATH/coredns/coredns.yaml;
+    fi
+    # [Unified Setup] add host for control & compute plane
+    if [[ -z "${CONTROL_COMPUTE_PLANE_HOST_ENTRY}" ]]; then
+        sed -i '/<CONTROL-COMPUTE-PLANE-HOST-ENTRY>/d' $DIR_PATH/coredns/coredns.yaml
+    else
+        sed -i "s/<CONTROL-COMPUTE-PLANE-HOST-ENTRY>/$CONTROL_COMPUTE_PLANE_HOST_ENTRY/g" $DIR_PATH/coredns/coredns.yaml;
+    fi
+
+    kubectl apply -f $DIR_PATH/coredns/coredns.yaml;
 }
 install_metrics_server () {
     echo "image:
@@ -620,7 +666,7 @@ spec:
   ingressClassName: nginx" > proxy-ingress.yaml
     PROXY_INGRESS_INSTALL_SUCCEEDED="false"
     while [ "$PROXY_INGRESS_INSTALL_SUCCEEDED" != "true" ]
-    do 
+    do
         PROXY_INGRESS_INSTALL_SUCCEEDED="true"
         	kubectl create -f proxy-ingress.yaml || PROXY_INGRESS_INSTALL_SUCCEEDED="false";
         sleep 1;
@@ -639,7 +685,7 @@ install_operator_suite () {
       tag: v$ROBOT_OPERATOR_CHART_VERSION" > $DIR_PATH/robot-operator/values.yaml;
     RO_HELM_INSTALL_SUCCEEDED="false"
     while [ "$RO_HELM_INSTALL_SUCCEEDED" != "true" ]
-    do 
+    do
         RO_HELM_INSTALL_SUCCEEDED="true"
         helm upgrade -i \
             robot-operator $DIR_PATH/robot-operator/robot-operator-$ROBOT_OPERATOR_CHART_VERSION.tgz \
@@ -704,7 +750,7 @@ EOF
 }
 set_up_file_manager () {
     FILEBROWSER_CONFIG_PATH=/etc/robolaunch/filebrowser;
-    
+
     curl -fsSL https://raw.githubusercontent.com/tunahanertekin/filebrowser/master/get.sh | bash;
     mkdir -p /etc/robolaunch/services ${FILEBROWSER_CONFIG_PATH} /var/log/services/vdi;
     git clone https://github.com/robolaunch/file-manager-config ${FILEBROWSER_CONFIG_PATH}/filebrowser-config;
@@ -716,7 +762,7 @@ set_up_file_manager () {
         --branding.files ${FILEBROWSER_CONFIG_PATH}"/filebrowser-config/branding" \
         --branding.disableExternal \
         -d ${FILEBROWSER_CONFIG_PATH}/filebrowser-host.db;
-      
+
     chmod 1777 ${FILEBROWSER_CONFIG_PATH}/filebrowser-host.db /var/log/services ${FILEBROWSER_CONFIG_PATH}/filebrowser-config/;
     chown root ${FILEBROWSER_CONFIG_PATH}/filebrowser-host.db /var/log/services ${FILEBROWSER_CONFIG_PATH}/filebrowser-config/;
 
@@ -774,6 +820,8 @@ print_global_log "Setting up NVIDIA container runtime...";
 (set_up_nvidia_container_runtime)
 print_global_log "Copying Start Script...";
 (copy_start_script)
+print_global_log "Adding host entries...";
+(add_host_entries)
 print_global_log "Setting up k3s cluster...";
 (set_up_k3s)
 print_global_log "Checking cluster health...";
@@ -784,8 +832,10 @@ print_global_log "Creating admin crb...";
 (create_admin_crb)
 print_global_log "Creating super admin crb...";
 (create_super_admin_crb)
+# print_global_log "Installing coredns...";
+# (install_coredns)
 print_global_log "Installing coredns...";
-(install_coredns)
+(install_coredns_as_manifest)
 print_global_log "Installing metrics-server...";
 (install_metrics_server)
 print_global_log "Installing ingress...";
