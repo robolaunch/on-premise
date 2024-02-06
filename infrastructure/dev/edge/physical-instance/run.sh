@@ -247,6 +247,7 @@ set_up_k3s () {
             --service-cidr=$DESIRED_SERVICE_CIDR \
             --cluster-domain=$PHYSICAL_INSTANCE.local \
             --disable-network-policy \
+            --disable=coredns \
             --disable=traefik \
             --disable=local-storage \
             --disable=metrics-server \
@@ -344,6 +345,50 @@ servers:
       --create-namespace \
       -f $DIR_PATH/coredns/values.yaml
 	sleep 2;
+}
+
+add_host_entries () {
+    # [Distributed Setup] add host for control plane
+    if [[ -n "${CONTROL_PLANE_HOST_ENTRY}" && $(grep -L "$CONTROL_PLANE_HOST_ENTRY" /etc/hosts) ]]; then
+        sed -i "2i$CONTROL_PLANE_HOST_ENTRY" /etc/hosts;
+    fi
+    # [Distributed Setup] add host for compute plane
+    if [[ -n "${COMPUTE_PLANE_HOST_ENTRY}" && $(grep -L "$COMPUTE_PLANE_HOST_ENTRY" /etc/hosts) ]]; then
+        sed -i "2i$COMPUTE_PLANE_HOST_ENTRY" /etc/hosts;
+    fi
+    # [Unified Setup] add host for control & compute plane
+    if [[ -n "${CONTROL_COMPUTE_PLANE_HOST_ENTRY}" && $(grep -L "$CONTROL_COMPUTE_PLANE_HOST_ENTRY" /etc/hosts) ]]; then
+        sed -i "2i$CONTROL_COMPUTE_PLANE_HOST_ENTRY" /etc/hosts;
+    fi
+}
+
+install_coredns_as_manifest () {
+    set_desired_service_cidr;
+    COREDNS_SERVICE_CLUSTER_IP="${DESIRED_SERVICE_CIDR%.*}.10";
+    sed -i "s#<COREDNS-FORWARD>#8.8.8.8#g" $DIR_PATH/coredns/coredns.yaml;
+    sed -i "s#<CLOUD-INSTANCE>#$CLOUD_INSTANCE#g" $DIR_PATH/coredns/coredns.yaml;
+    sed -i "s#<COREDNS-SERVICE-CLUSTER-IP>#$COREDNS_SERVICE_CLUSTER_IP#g" $DIR_PATH/coredns/coredns.yaml;
+
+    # [Distributed Setup] add host for control plane
+    if [[ -z "${CONTROL_PLANE_HOST_ENTRY}" ]]; then
+        sed -i '/<CONTROL-PLANE-HOST-ENTRY>/d' $DIR_PATH/coredns/coredns.yaml
+    else
+        sed -i "s/<CONTROL-PLANE-HOST-ENTRY>/$CONTROL_PLANE_HOST_ENTRY/g" $DIR_PATH/coredns/coredns.yaml;
+    fi
+    # [Distributed Setup] add host for compute plane
+    if [[ -z "${COMPUTE_PLANE_HOST_ENTRY}" ]]; then
+        sed -i '/<COMPUTE-PLANE-HOST-ENTRY>/d' $DIR_PATH/coredns/coredns.yaml
+    else
+        sed -i "s/<COMPUTE-PLANE-HOST-ENTRY>/$COMPUTE_PLANE_HOST_ENTRY/g" $DIR_PATH/coredns/coredns.yaml;
+    fi
+    # [Unified Setup] add host for control & compute plane
+    if [[ -z "${CONTROL_COMPUTE_PLANE_HOST_ENTRY}" ]]; then
+        sed -i '/<CONTROL-COMPUTE-PLANE-HOST-ENTRY>/d' $DIR_PATH/coredns/coredns.yaml
+    else
+        sed -i "s/<CONTROL-COMPUTE-PLANE-HOST-ENTRY>/$CONTROL_COMPUTE_PLANE_HOST_ENTRY/g" $DIR_PATH/coredns/coredns.yaml;
+    fi
+
+    kubectl apply -f $DIR_PATH/coredns/coredns.yaml;
 }
 
 install_openebs () {
@@ -561,6 +606,9 @@ print_global_log "Creating directories...";
 print_global_log "Installing tools...";
 (install_post_tools)
 
+print_global_log "Adding host entries...";
+(add_host_entries)
+
 print_global_log "Setting up k3s cluster...";
 (set_up_k3s)
 
@@ -575,6 +623,9 @@ print_global_log "Updating Helm repositories...";
 
 # print_global_log "Installing CoreDNS...";
 # (install_coredns)
+
+print_global_log "Installing CoreDNS...";
+(install_coredns_as_manifest)
 
 print_global_log "Creating admin crb...";
 (create_admin_crb)
