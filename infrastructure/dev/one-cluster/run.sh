@@ -260,6 +260,7 @@ set_up_k3s () {
           --service-cidr=$DESIRED_SERVICE_CIDR \
           --cluster-domain=$CLUSTER_DOMAIN.local \
           --disable-network-policy \
+          --disable=coredns \
           --disable=traefik \
           --disable=local-storage \
           --disable=metrics-server \
@@ -515,7 +516,7 @@ servers:
       -f $DIR_PATH/coredns/values.yaml
 	sleep 2;
 }
-edit_coredns () {
+install_coredns_as_manifest () {
     # forward to /etc/resolv.conf
     sed -i "s#<COREDNS-FORWARD>#/etc/resolv.conf#g" $DIR_PATH/coredns/coredns.yaml;
     sed -i "s#<CLOUD-INSTANCE>#$CLOUD_INSTANCE#g" $DIR_PATH/coredns/coredns.yaml;
@@ -539,7 +540,7 @@ edit_coredns () {
         sed -i "s/<CONTROL-COMPUTE-PLANE-HOST-ENTRY>/$CONTROL_COMPUTE_PLANE_HOST_ENTRY/g" $DIR_PATH/coredns/coredns.yaml;
     fi
 
-    cp $DIR_PATH/coredns/coredns.yaml /var/lib/rancher/k3s/server/manifests/coredns_override.yaml;
+    kubectl apply -f $DIR_PATH/coredns/coredns.yaml;
 }
 install_metrics_server () {
     echo "image:
@@ -817,8 +818,8 @@ print_global_log "Creating super admin crb...";
 (create_super_admin_crb)
 # print_global_log "Installing coredns...";
 # (install_coredns)
-print_global_log "Editing coredns...";
-(edit_coredns)
+print_global_log "Installing coredns...";
+(install_coredns_as_manifest)
 print_global_log "Installing metrics-server...";
 (install_metrics_server)
 print_global_log "Installing ingress...";
