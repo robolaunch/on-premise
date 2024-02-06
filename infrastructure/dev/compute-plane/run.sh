@@ -37,10 +37,12 @@ OIDC_ORGANIZATION_CLIENT_SECRET=$org_client_secret
 COOKIE_SECRET=MFlZN1J5eitIdUplckJLaW55YlF6UjVlQ3lneFJBcEU=
 DOMAIN=$root_domain
 SERVER_URL=$CLOUD_INSTANCE.$DOMAIN
+GITHUB_PATH=$github_pat
+
+############## Optional Parameters ##############
 SELF_SIGNED_CERT=$self_signed_cert
 TZ_CONTINENT=$tz_continent
 TZ_CITY=$tz_city
-GITHUB_PATH=$github_pat
 CONTROL_PLANE_HOST_ENTRY=$control_plane_host_entry
 COMPUTE_PLANE_HOST_ENTRY=$compute_plane_host_entry
 CONTROL_COMPUTE_PLANE_HOST_ENTRY=$control_compute_plane_host_entry
@@ -54,6 +56,7 @@ if [[ -z "${mig_strategy}" ]]; then
 else
     MIG_STRATEGY=$mig_strategy
 fi
+#################################################
 
 BLUE='\033[0;34m';
 GREEN='\033[0;32m';
@@ -514,7 +517,7 @@ servers:
 	sleep 2;
 }
 edit_coredns () {
-    # add custom config for CoreDNS
+    
 }
 install_metrics_server () {
     echo "image:
