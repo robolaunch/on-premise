@@ -519,15 +519,15 @@ servers:
 add_host_entries () {
     # [Distributed Setup] add host for control plane
     if [[ -n "${CONTROL_PLANE_HOST_ENTRY}" && ! $(grep -q "$CONTROL_PLANE_HOST_ENTRY" /etc/hosts) ]]; then
-        echo $CONTROL_PLANE_HOST_ENTRY >> /etc/hosts;
+        sed -i "2i$CONTROL_PLANE_HOST_ENTRY" /etc/hosts;
     fi
     # [Distributed Setup] add host for compute plane
     if [[ -n "${COMPUTE_PLANE_HOST_ENTRY}" && ! $(grep -q "$COMPUTE_PLANE_HOST_ENTRY" /etc/hosts) ]]; then
-        echo $COMPUTE_PLANE_HOST_ENTRY >> /etc/hosts;
+        sed -i "2i$COMPUTE_PLANE_HOST_ENTRY" /etc/hosts;
     fi
     # [Unified Setup] add host for control & compute plane
     if [[ -n "${CONTROL_COMPUTE_PLANE_HOST_ENTRY}" && ! $(grep -q "$CONTROL_COMPUTE_PLANE_HOST_ENTRY" /etc/hosts) ]]; then
-        echo $CONTROL_COMPUTE_PLANE_HOST_ENTRY >> /etc/hosts;
+        sed -i "2i$CONTROL_COMPUTE_PLANE_HOST_ENTRY" /etc/hosts;
     fi
 }
 install_coredns_as_manifest () {
