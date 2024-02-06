@@ -531,9 +531,10 @@ add_host_entries () {
     fi
 }
 install_coredns_as_manifest () {
-    # forward to /etc/resolv.conf
+    COREDNS_SERVICE_CLUSTER_IP="10.200.2.10";
     sed -i "s#<COREDNS-FORWARD>#/etc/resolv.conf#g" $DIR_PATH/coredns/coredns.yaml;
     sed -i "s#<CLOUD-INSTANCE>#$CLOUD_INSTANCE#g" $DIR_PATH/coredns/coredns.yaml;
+    sed -i "s#<COREDNS-SERVICE-CLUSTER-IP>#$COREDNS_SERVICE_CLUSTER_IP#g" $DIR_PATH/coredns/coredns.yaml;
 
     # [Distributed Setup] add host for control plane
     if [[ -z "${CONTROL_PLANE_HOST_ENTRY}" ]]; then
