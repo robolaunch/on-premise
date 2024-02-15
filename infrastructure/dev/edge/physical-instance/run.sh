@@ -367,7 +367,7 @@ install_coredns_as_manifest () {
     set_desired_service_cidr;
     COREDNS_SERVICE_CLUSTER_IP="${DESIRED_SERVICE_CIDR%.*}.10";
     sed -i "s#<COREDNS-FORWARD>#8.8.8.8#g" $DIR_PATH/coredns/coredns.yaml;
-    sed -i "s#<CLOUD-INSTANCE>#$CLOUD_INSTANCE#g" $DIR_PATH/coredns/coredns.yaml;
+    sed -i "s#<CLOUD-INSTANCE>#$PHYSICAL_INSTANCE#g" $DIR_PATH/coredns/coredns.yaml;
     sed -i "s#<COREDNS-SERVICE-CLUSTER-IP>#$COREDNS_SERVICE_CLUSTER_IP#g" $DIR_PATH/coredns/coredns.yaml;
 
     # [Distributed Setup] add host for control plane
@@ -534,7 +534,7 @@ register_me () {
     # SKIP_PLATFORM is not set
     if [[ -z "${SKIP_PLATFORM}" ]]; then
         # register cloud instance DNS to enable access over cloud instance 
-        curl -vk --resolve $CLOUD_INSTANCE.robolaunch.cloud:6443:127.0.0.1  https://$CLOUD_INSTANCE.robolaunch.cloud:6443/ping;
+        curl -vk --resolve $TEAM.robolaunch.cloud:6443:127.0.0.1  https://$TEAM.robolaunch.cloud:6443/ping;
         # set credentials for federation
         echo $CLOUD_INSTANCE_CA | base64 --decode >> /tmp/ca.crt;
         kubectl config set-cluster cloud-instance --server=$CLOUD_INSTANCE_API_SERVER --certificate-authority=/tmp/ca.crt --embed-certs=true 2>/dev/null 1>/dev/null;
