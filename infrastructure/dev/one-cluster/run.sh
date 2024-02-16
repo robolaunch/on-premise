@@ -555,6 +555,18 @@ install_coredns_as_manifest () {
         sed -i "s/<CONTROL-COMPUTE-PLANE-HOST-ENTRY>/$CONTROL_COMPUTE_PLANE_HOST_ENTRY/g" $DIR_PATH/coredns/coredns.yaml;
     fi
 
+    cat << EOF | kubectl apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: host-entries
+  namespace: kube-system
+data:
+  control_plane_host_entry: "$CONTROL_PLANE_HOST_ENTRY"
+  compute_plane_host_entry: "$COMPUTE_PLANE_HOST_ENTRY"
+  control_compute_plane_host_entry: "$CONTROL_COMPUTE_PLANE_HOST_ENTRY"
+EOF;
+
     kubectl apply -f $DIR_PATH/coredns/coredns.yaml;
 }
 install_metrics_server () {
