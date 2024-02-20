@@ -555,24 +555,23 @@ install_coredns_as_manifest () {
         sed -i "s/<CONTROL-COMPUTE-PLANE-HOST-ENTRY>/$CONTROL_COMPUTE_PLANE_HOST_ENTRY/g" $DIR_PATH/coredns/coredns.yaml;
     fi
 
-    cat << EOF | kubectl apply -f -
-apiVersion: v1
+    echo "apiVersion: v1
 kind: ConfigMap
 metadata:
   name: host-entries
   namespace: kube-system
 data:
-  control_plane_host_entry: "$CONTROL_PLANE_HOST_ENTRY"
-  compute_plane_host_entry: "$COMPUTE_PLANE_HOST_ENTRY"
-  control_compute_plane_host_entry: "$CONTROL_COMPUTE_PLANE_HOST_ENTRY"
-EOF;
+  control_plane_host_entry: \"$CONTROL_PLANE_HOST_ENTRY\"
+  compute_plane_host_entry: \"$COMPUTE_PLANE_HOST_ENTRY\"
+  control_compute_plane_host_entry: \"$CONTROL_COMPUTE_PLANE_HOST_ENTRY\"" > $DIR_PATH/coredns/host-entries-cm.yaml;
 
+    kubectl apply -f $DIR_PATH/coredns/host-entries-cm.yaml;
     kubectl apply -f $DIR_PATH/coredns/coredns.yaml;
 }
 install_metrics_server () {
     echo "image:
   repository: quay.io/robolaunchio/metrics-server
-  tag: v0.6.4" > $DIR_PATH/metrics-server/values.yaml
+  tag: v0.6.4" > $DIR_PATH/metrics-server/values.yaml;
     helm upgrade --install \
       metrics-server $DIR_PATH/metrics-server/metrics-server-3.11.0.tgz \
       --namespace metrics-server \
@@ -609,7 +608,7 @@ defaultBackend:
   image:
     registry: quay.io
     image: robolaunchio/defaultbackend-amd64
-    tag: 1.5" > $DIR_PATH/ingress-nginx/values.yaml
+    tag: 1.5" > $DIR_PATH/ingress-nginx/values.yaml;
 	helm upgrade --install \
       ingress-nginx $DIR_PATH/ingress-nginx/ingress-nginx-4.7.1.tgz \
       --namespace ingress-nginx \
