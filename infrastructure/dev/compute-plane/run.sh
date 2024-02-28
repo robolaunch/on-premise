@@ -23,7 +23,7 @@ print_err () {
 ORGANIZATION=org_$org_name_plain
 GROUP=org_$org_name_plain"_admin"
 GROUP_SUPER_ADMIN=org_$org_name_plain"_super_admin"
-TEAM=org_$org_name_plain
+TEAM=$cloud_instance
 REGION=$region_plain
 CLOUD_INSTANCE=$cloud_instance
 CLOUD_INSTANCE_ALIAS=$cloud_instance_alias
@@ -304,6 +304,7 @@ label_node () {
       robolaunch.io/mig-instance-type=$MIG_INSTANCE_TYPE \
       robolaunch.io/tz-continent=$TZ_CONTINENT \
       robolaunch.io/tz-city=$TZ_CITY \
+      robolaunch.io/domain=$DOMAIN \
       submariner.io/gateway="true";
 }
 install_openebs () {

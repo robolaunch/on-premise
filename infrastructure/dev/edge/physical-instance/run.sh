@@ -283,6 +283,7 @@ label_node () {
         robolaunch.io/physical-instance=$PHYSICAL_INSTANCE \
         robolaunch.io/tz-continent=$TZ_CONTINENT \
         robolaunch.io/tz-city=$TZ_CITY \
+        robolaunch.io/domain=$DOMAIN \
         submariner.io/gateway="true";
 }
 
