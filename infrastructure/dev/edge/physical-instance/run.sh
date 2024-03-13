@@ -555,6 +555,7 @@ spec:
     clientCertificate: $CLIENT_CERTIFICATE
     clientKey: $CLIENT_KEY
 EOF
+        kubectl config use-context default;
         print_log "Go to the platform and check if your physical instance $PHYSICAL_INSTANCE is connected to your cloud instance $CLOUD_INSTANCE_ALIAS/$CLOUD_INSTANCE.";
         print_log "Check your physical instance status by running the command below in your cloud instance:\n\n";
         printf "\n\n";
