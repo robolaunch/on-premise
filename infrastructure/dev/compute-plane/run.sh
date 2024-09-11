@@ -166,6 +166,23 @@ check_if_root () {
         print_err "You should switch to root using \"sudo -i\" before setup."
     fi
 }
+check_firewall () {
+    if ! command -v ufw &> /dev/null
+    then
+        print_err "UFW (Uncomplicated Firewall) is not installed. Please install it first.";
+    fi
+
+    status=$(ufw status | grep -i "Status:");
+
+    if [[ $status == *"Status: active"* ]]; then
+        print_err "Firewall is active. Deactivate it using \"ufw disable\" before startup.";
+    elif [[ $status == *"Status: inactive"* ]]; then
+        sleep 1;
+        # echo "Firewall is inactive."
+    else
+        print_err "Unable to determine firewall status.";
+    fi
+}
 wait_for_apt_db_lock () {
     while [ "$?" -ne 0 ]
     do
@@ -804,6 +821,7 @@ WantedBy=default.target" > /etc/systemd/system/filebrowser.service;
 
 print_global_log "Waiting for the preflight checks...";
 (check_if_root)
+(check_firewall)
 print_global_log "Waiting for the apt database lock...";
 (wait_for_apt_db_lock)
 print_global_log "Configuring remote SSH connection...";
