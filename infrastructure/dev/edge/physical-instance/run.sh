@@ -217,6 +217,24 @@ check_if_root () {
     fi
 }
 
+check_firewall () {
+    if ! command -v ufw &> /dev/null
+    then
+        print_err "UFW (Uncomplicated Firewall) is not installed. Please install it first.";
+    fi
+
+    status=$(ufw status | grep -i "Status:");
+
+    if [[ $status == *"Status: active"* ]]; then
+        print_err "Firewall is active. Deactivate it using \"ufw disable\" before startup.";
+    elif [[ $status == *"Status: inactive"* ]]; then
+        sleep 1;
+        # echo "Firewall is inactive."
+    else
+        print_err "Unable to determine firewall status.";
+    fi
+}
+
 install_pre_tools () {
     print_log "Installing Tools...";
     # apt packages
@@ -585,6 +603,7 @@ EOF";
 
 print_global_log "Waiting for the preflight checks...";
 (check_if_root)
+(check_firewall)
 (install_pre_tools)
 (get_versioning_map)
 (make_life_more_beautiful)
