@@ -1,6 +1,6 @@
 # Running the Script
 
-Enter the information below as environment variable:
+Enter the information below as environment variable before running the installation script `run.sh`:
 
 ```bash
 export org_name_plain=aws-org
