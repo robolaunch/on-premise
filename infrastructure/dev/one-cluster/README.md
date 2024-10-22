@@ -49,3 +49,7 @@ export control_compute_plane_host_entry="<IP>   <ENTRIES>"
 ## Artifacts
 
 Artifacts are available under [releases section of this repository](https://github.com/robolaunch/on-premise/releases).
+
+## Versions
+
+Versions for artifacts and other components are fetched from [`platform.yaml`](https://raw.githubusercontent.com/robolaunch/robolaunch/main/platform.yaml).
