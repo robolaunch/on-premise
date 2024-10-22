@@ -37,6 +37,7 @@ COOKIE_SECRET=MFlZN1J5eitIdUplckJLaW55YlF6UjVlQ3lneFJBcEU=
 DOMAIN=$root_domain
 SERVER_URL=$CLOUD_INSTANCE.$DOMAIN
 GITHUB_PATH=$github_pat
+NVIDIA_DRIVER_VERSION=$nvidia_driver_version
 
 ############## Optional Parameters ##############
 SELF_SIGNED_CERT=$self_signed_cert
@@ -244,7 +245,7 @@ set_up_nvidia_container_runtime () {
     DEBIAN_FRONTEND=noninteractive
     apt-get update;
     apt-get install -y gnupg linux-headers-$(uname -r);
-    apt-get install -y --no-install-recommends nvidia-driver-525;
+    apt-get install -y --no-install-recommends nvidia-driver-$NVIDIA_DRIVER_VERSION;
     distribution=$(. /etc/os-release;echo $ID$VERSION_ID);
     curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | apt-key add -;
     curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | tee /etc/apt/sources.list.d/nvidia-docker.list;
