@@ -45,3 +45,7 @@ export control_compute_plane_host_entry="<IP>   <ENTRIES>"
 |     `control_plane_host_entry`     | Optional | Host entries for the control plane services, used if it’s a simple compute plane setup.                                                                  | `18.159.141.7    eskisehir-identity.robolaunch.internal eskisehir-storage.robolaunch.internal eskisehir-backend.robolaunch.internal eskisehir-ui.robolaunch.internal`                            |
 |     `compute_plane_host_entry`     | Optional | Host entry for the same compute plane, used if it’s a simple compute plane setup.                                                                        | `3.124.201.74    esk-02.robolaunch.internal`                                                                                                                                                     |
 | `control_compute_plane_host_entry` | Optional | Host entries for the control plane services, used if it’s a one cluster (control + compute plane) setup.                                                 | `18.159.141.7    esk-01.robolaunch.internal eskisehir-identity.robolaunch.internal eskisehir-storage.robolaunch.internal eskisehir-backend.robolaunch.internal eskisehir-ui.robolaunch.internal` |
+
+## Artifacts
+
+Artifacts are available under [releases section of this repository](https://github.com/robolaunch/on-premise/releases).
