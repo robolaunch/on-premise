@@ -773,7 +773,7 @@ EOF
 install_nvidia_dcgm_exporter () {
     kubectl apply -f https://raw.githubusercontent.com/prometheus-community/helm-charts/main/charts/kube-prometheus-stack/charts/crds/crds/crd-servicemonitors.yaml;
     echo "image:
-  repository: nvcr.io/nvidia/k8s/dcgm-exporter
+  repository: nvidia/dcgm-exporter
   tag: 3.3.0-3.2.0-ubuntu22.04
 arguments: ["-f", "/etc/dcgm-exporter/dcp-metrics-included.csv"]
 serviceMonitor:
