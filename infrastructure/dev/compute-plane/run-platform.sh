@@ -816,7 +816,7 @@ metadata:
   name: rl-metrics
   namespace: rl-metrics
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /\$REWRITE_TARGET
+    nginx.ingress.kubernetes.io/rewrite-target: /$REWRITE_TARGET
     nginx.ingress.kubernetes.io/proxy-buffer-size: 16k
     nginx.ingress.kubernetes.io/proxy-buffers-number: "4"
 spec:
@@ -834,7 +834,7 @@ spec:
                   number: 9400
   tls:
     - hosts:
-        - public-l4-01-gsvdtvnu.robolaunch.cloud
+        - ${SERVER_URL}
       secretName: prod-tls
 EOF
 
