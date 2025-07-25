@@ -808,15 +808,15 @@ spec:
 EOF
 }
 install_metrics_ingress () {
-export REWRITE_TARGET="$2"
-    cat <<EOF > metrics-ingress.yaml
+  local REWRITE_TARGET="$2"
+  cat <<EOF > metrics-ingress.yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: rl-metrics
   namespace: rl-metrics
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /$REWRITE_TARGET
+    nginx.ingress.kubernetes.io/rewrite-target: /${REWRITE_TARGET}
     nginx.ingress.kubernetes.io/proxy-buffer-size: 16k
     nginx.ingress.kubernetes.io/proxy-buffers-number: "4"
 spec:
@@ -838,8 +838,8 @@ spec:
       secretName: prod-tls
 EOF
 
-    kubectl apply -f metrics-ingress.yaml
-    rm -f metrics-ingress.yaml
+  kubectl apply -f metrics-ingress.yaml
+  rm -f metrics-ingress.yaml
 }
 set_up_file_manager () {
     FILEBROWSER_CONFIG_PATH=/etc/robolaunch/filebrowser;
