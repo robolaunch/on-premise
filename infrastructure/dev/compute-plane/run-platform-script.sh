@@ -303,7 +303,7 @@ set_up_k3s () {
         INSTALL_K3S_VERSION=v1.31.10+k3s1 \
         K3S_KUBECONFIG_MODE="644" \
         INSTALL_K3S_EXEC="\
-		  --tls-san=$SERVER_URL \ 
+	  --tls-san=$SERVER_URL \
           --cluster-cidr=$DESIRED_CLUSTER_CIDR \
           --service-cidr=$DESIRED_SERVICE_CIDR \
           --cluster-domain=$CLUSTER_DOMAIN.local \
