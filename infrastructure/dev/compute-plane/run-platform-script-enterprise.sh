@@ -227,6 +227,7 @@ create_directories () {
     mkdir -p $DIR_PATH/openebs;
     mkdir -p $DIR_PATH/cert-manager;
     mkdir -p $DIR_PATH/nvidia-device-plugin;
+	mkdir -p $DIR_PATH/gpu-operator;
     mkdir -p $DIR_PATH/nvidia-dcgm-exporter;
     mkdir -p $DIR_PATH/ingress-nginx;
     mkdir -p $DIR_PATH/oauth2-proxy;
@@ -878,6 +879,191 @@ WantedBy=default.target" > /etc/systemd/system/filebrowser.service;
     kubectl apply -f $DIR_PATH/filemanager/filebrowser-relay-resources.yaml;
 }
 
+# ---- GPU Operator Config Function ----
+configure_gpu_operator() {
+  local gpu_count=${GPU_COUNT:-1}        # toplam GPU sayısı (default 1)
+  local ts_replicas=${TS_REPLICAS:-4}    # time-slicing replicas
+  local HELM_VERSION=${HELM_VERSION:-"v25.3.4"}   # helm chart versiyonu
+
+  MIG_CONFIG_FILE="$DIR_PATH/gpu-operator/mig-configmap.yaml"
+  TS_CONFIG_FILE="$DIR_PATH/gpu-operator/ts-configmap.yaml"
+  VALUES_FILE="$DIR_PATH/gpu-operator/values.yaml"
+
+  # --- Helm repo ve namespace setup ---
+  helm repo add nvidia https://nvidia.github.io/gpu-operator || true
+  helm repo update
+  kubectl create ns gpu-operator || true
+
+  # --- Node name otomatik seç (tek node varsayımı) ---
+  if [[ -z "${NODE_NAME:-}" ]]; then
+    NODE_NAME=$(kubectl get nodes -o jsonpath='{.items[0].metadata.name}')
+    echo "ℹ️  NODE_NAME belirtilmedi, otomatik olarak seçildi: ${NODE_NAME}"
+  fi
+
+  # MIG config başlat (all-disabled her zaman var)
+  cat > ${MIG_CONFIG_FILE} <<EOF
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: custom-mig-config
+  namespace: gpu-operator
+data:
+  config.yaml: |-
+    version: v1
+    mig-configs:
+      all-disabled:
+        - devices: all
+          mig-enabled: false
+      custom-mig:
+EOF
+
+  local mig_used=false
+  local ts_used=false
+
+  for ((i=0; i<gpu_count; i++)); do
+    mode_var="GPU${i}_MODE"
+    mode=${!mode_var:-bare}   # default bare
+
+    case "$mode" in
+      mig)
+        mig_used=true
+        profiles_var="GPU${i}_MIG_PROFILES"
+        profiles=${!profiles_var:-}
+        if [[ -n "$profiles" ]]; then
+          echo "        - devices: [${i}]" >> ${MIG_CONFIG_FILE}
+          echo "          mig-enabled: true" >> ${MIG_CONFIG_FILE}
+          echo "          mig-devices:" >> ${MIG_CONFIG_FILE}
+          IFS=',' read -ra items <<< "$profiles"
+          for item in "${items[@]}"; do
+            profile=$(echo $item | cut -d: -f1)
+            count=$(echo $item | cut -d: -f2)
+            echo "            \"${profile}\": ${count}" >> ${MIG_CONFIG_FILE}
+          done
+        else
+          echo "        - devices: [${i}]" >> ${MIG_CONFIG_FILE}
+          echo "          mig-enabled: true" >> ${MIG_CONFIG_FILE}
+        fi
+        ;;
+      ts)
+        ts_used=true
+        echo "        - devices: [${i}]" >> ${MIG_CONFIG_FILE}
+        echo "          mig-enabled: false" >> ${MIG_CONFIG_FILE}
+        ;;
+      bare)
+        echo "        - devices: [${i}]" >> ${MIG_CONFIG_FILE}
+        echo "          mig-enabled: false" >> ${MIG_CONFIG_FILE}
+        ;;
+      *)
+        echo "⚠️  Geçersiz mod: $mode (GPU${i})"
+        ;;
+    esac
+  done
+
+  # Time-slicing ConfigMap (eğer ts varsa)
+  if [[ "$ts_used" == true ]]; then
+    cat > ${TS_CONFIG_FILE} <<EOF
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: device-plugin-config
+  namespace: gpu-operator
+data:
+  config.yaml: |-
+    version: v1
+    sharing:
+      timeSlicing:
+        resources:
+          - name: nvidia.com/gpu
+            replicas: ${ts_replicas}
+EOF
+    kubectl apply -f ${TS_CONFIG_FILE}
+  fi
+
+  # MIG ConfigMap (eğer mig varsa)
+  if [[ "$mig_used" == true ]]; then
+    kubectl apply -f ${MIG_CONFIG_FILE}
+    kubectl label node ${NODE_NAME} nvidia.com/mig.config=custom-mig --overwrite
+  fi
+
+  # values.yaml (senaryoya göre)
+  cat > ${VALUES_FILE} <<EOF
+mig:
+  strategy: mixed
+EOF
+
+  if [[ "$ts_used" == true && "$mig_used" == true ]]; then
+    # MIG + TS beraber
+    cat >> ${VALUES_FILE} <<EOF
+devicePlugin:
+  enabled: true
+  runtimeClassName: nvidia
+  config:
+    name: device-plugin-config
+    default: config.yaml
+    create: false
+migManager:
+  enabled: true
+  runtimeClassName: nvidia
+  config:
+    name: custom-mig-config
+    default: ""
+toolkit:
+  enabled: false
+EOF
+
+  elif [[ "$ts_used" == true ]]; then
+    # Sadece TS
+    cat >> ${VALUES_FILE} <<EOF
+devicePlugin:
+  enabled: true
+  runtimeClassName: nvidia
+  config:
+    name: device-plugin-config
+    default: config.yaml
+    create: false
+migManager:
+  enabled: false
+toolkit:
+  enabled: false
+EOF
+
+  elif [[ "$mig_used" == true ]]; then
+    # Sadece MIG
+    cat >> ${VALUES_FILE} <<EOF
+devicePlugin:
+  enabled: true
+  runtimeClassName: nvidia
+migManager:
+  enabled: true
+  runtimeClassName: nvidia
+  config:
+    name: custom-mig-config
+    default: ""
+toolkit:
+  enabled: false
+EOF
+
+  else
+    # Ne MIG ne TS (tamamen bare GPU’lar)
+    cat >> ${VALUES_FILE} <<EOF
+devicePlugin:
+  enabled: true
+  runtimeClassName: nvidia
+migManager:
+  enabled: false
+toolkit:
+  enabled: false
+EOF
+  fi
+
+  # Deploy GPU Operator
+  helm upgrade --install gpu-operator nvidia/gpu-operator \
+    -n gpu-operator \
+    --create-namespace \
+    -f ${VALUES_FILE} \
+    --version=${HELM_VERSION}
+}
+
 ##############################################################
 ##############################################################
 ##############################################################
@@ -944,8 +1130,8 @@ print_global_log "Installing proxy-ingress...";
 (install_proxy_ingress)
 print_global_log "Installing NVIDIA runtime...";
 (install_nvidia_runtime_class)
-print_global_log "Installing NVIDIA device plugin...";
-(install_nvidia_device_plugin)
+print_global_log "Installing NVIDIA gpu operator...";
+(configure_gpu_operator)
 #print_global_log "Installing robolaunch Operator Suite...";
 #(install_operator_suite)
 print_global_log "Deploying MetricsExporter namespace...";
