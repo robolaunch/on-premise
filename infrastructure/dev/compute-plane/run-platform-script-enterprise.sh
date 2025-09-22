@@ -814,8 +814,8 @@ install_metrics_ingress () {
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: rl-metrics
-  namespace: rl-metrics
+  name: gpu-metrics
+  namespace: gpu-operator
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /\$2
     nginx.ingress.kubernetes.io/proxy-buffer-size: 16k
@@ -830,7 +830,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: dcgm-exporter
+                name: nvidia-dcgm-exporter
                 port:
                   number: 9400
   tls:
@@ -1135,9 +1135,9 @@ print_global_log "Installing NVIDIA gpu operator...";
 #print_global_log "Installing robolaunch Operator Suite...";
 #(install_operator_suite)
 print_global_log "Deploying MetricsExporter namespace...";
-(deploy_metrics_namespace)
+#(deploy_metrics_namespace)
 print_global_log "Installing NVIDIA DCGM exporter...";
-(install_nvidia_dcgm_exporter)
+#(install_nvidia_dcgm_exporter)
 #print_global_log "Deploying MetricsExporter...";
 #(deploy_metrics_exporter)
 print_global_log "Deploying Metrics Ingress...";
