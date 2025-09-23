@@ -39,6 +39,13 @@ DOMAIN=$root_domain
 SERVER_URL=$CLOUD_INSTANCE.$DOMAIN
 GITHUB_PATH=$github_pat
 NVIDIA_DRIVER_VERSION="550" # $nvidia_driver_version
+CUSTOM_HOSTNAME=$custom_hostname
+
+if [ -n "$CUSTOM_HOSTNAME" ]; then
+    SERVER_URL="$CUSTOM_HOSTNAME"
+else
+    SERVER_URL="$CLOUD_INSTANCE.$DOMAIN"
+fi
 
 ############## Optional Parameters ##############
 SELF_SIGNED_CERT=$self_signed_cert
