@@ -820,7 +820,7 @@ spec:
       http:
         paths:
           - path: /metrics(/|$)(.*)
-            pathType: Prefix
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: nvidia-dcgm-exporter
