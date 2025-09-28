@@ -29,8 +29,6 @@ REGION=$region_plain
 CLOUD_INSTANCE=$cloud_instance
 CLOUD_INSTANCE_ALIAS=$cloud_instance_alias
 CLUSTER_DOMAIN=$cloud_instance
-DESIRED_CLUSTER_CIDR=10.200.1.0/24
-DESIRED_SERVICE_CIDR=10.200.2.0/24
 OIDC_URL=https://$identity_subdomain.$root_domain/realms/robo-realm
 OIDC_ORGANIZATION_CLIENT_ID=operator-client
 OIDC_ORGANIZATION_CLIENT_SECRET=$org_client_secret
@@ -119,20 +117,6 @@ set_cloud_instance_alias () {
         CLOUD_INSTANCE_ALIAS=$CLOUD_INSTANCE_ALIAS;
     fi
 }
-set_desired_cluster_cidr () {
-    if [[ -z "${DESIRED_CLUSTER_CIDR}" ]]; then
-        print_err "DESIRED_CLUSTER_CIDR should be set";
-    else
-        DESIRED_CLUSTER_CIDR=$DESIRED_CLUSTER_CIDR;
-    fi
-}
-set_desired_service_cidr () {
-    if [[ -z "${DESIRED_SERVICE_CIDR}" ]]; then
-        print_err "DESIRED_SERVICE_CIDR should be set";
-    else
-        DESIRED_SERVICE_CIDR=$DESIRED_SERVICE_CIDR;
-    fi
-}
 set_public_ip () {
     if [[ -z "${PUBLIC_IP}" ]]; then
         PUBLIC_IP=$(curl https://ipinfo.io/ip);
@@ -160,8 +144,6 @@ check_inputs () {
     set_region;
     set_cloud_instance;
     set_cloud_instance_alias;
-    set_desired_cluster_cidr;
-    set_desired_service_cidr;
 }
 get_versioning_map () {
     wget -P $DIR_PATH https://raw.githubusercontent.com/robolaunch/robolaunch/main/platform.yaml;
@@ -318,14 +300,13 @@ set_up_k3s () {
         K3S_KUBECONFIG_MODE="644" \
         INSTALL_K3S_EXEC="\
 	  --tls-san=$SERVER_URL \
-          --cluster-cidr=$DESIRED_CLUSTER_CIDR \
-          --service-cidr=$DESIRED_SERVICE_CIDR \
           --cluster-domain=$CLUSTER_DOMAIN.local \
           --disable-network-policy \
           --disable=coredns \
           --disable=traefik \
           --disable=local-storage \
           --disable=metrics-server \
+		  --data-dir=/data/lib/ \
           --pause-image=quay.io/robolaunchio/mirrored-pause:3.6 \
           --kube-apiserver-arg \
             oidc-issuer-url=$OIDC_URL \
@@ -390,7 +371,7 @@ localprovisioner:
       --create-namespace \
       -f $DIR_PATH/openebs/values.yaml;
     sleep 5;
-    kubectl patch storageclass openebs-hostpath -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}';
+    kubectl patch storageclass openebs-hostpath --type merge -p '{"metadata": {"annotations": {"cas.openebs.io/config": "- name: StorageType\n  value: \"hostpath\"\n- name: BasePath\n  value: \"/data/openebs/local\"","openebs.io/cas-type": "local"}}}'
 }
 install_nvidia_runtime_class () {
     cat << EOF | kubectl apply -f -
