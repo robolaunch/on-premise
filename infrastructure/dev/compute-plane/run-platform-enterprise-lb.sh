@@ -40,6 +40,12 @@ SERVER_URL=$CLOUD_INSTANCE.$DOMAIN
 GITHUB_PATH=$github_pat
 NVIDIA_DRIVER_VERSION="550" # $nvidia_driver_version
 CUSTOM_HOSTNAME=$custom_hostname
+CLOUD_PROVIDER=$cloud_provider
+
+if [ "$CLOUD_PROVIDER" != "default" ]; then
+    GROUP_SUPER_ADMIN=org_$CLOUD_PROVIDER"_super_admin"
+	GROUP=org_$org_name_plain
+fi
 
 if [ -n "$CUSTOM_HOSTNAME" ]; then
     SERVER_URL="$CUSTOM_HOSTNAME"
