@@ -302,7 +302,6 @@ set_up_k3s () {
 	  --tls-san=$SERVER_URL \
           --cluster-domain=$CLUSTER_DOMAIN.local \
           --disable-network-policy \
-          --disable=coredns \
           --disable=traefik \
           --disable=local-storage \
           --disable=metrics-server \
@@ -1089,8 +1088,8 @@ print_global_log "Creating super admin crb...";
 (create_super_admin_crb)
 # print_global_log "Installing coredns...";
 # (install_coredns)
-print_global_log "Installing coredns...";
-(install_coredns_as_manifest)
+#print_global_log "Installing coredns...";
+#(install_coredns_as_manifest)
 print_global_log "Installing metrics-server...";
 (install_metrics_server)
 print_global_log "Installing ingress...";
