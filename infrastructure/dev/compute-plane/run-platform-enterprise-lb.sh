@@ -803,7 +803,7 @@ spec:
 EOF
 }
 install_metrics_ingress () {
-  cat <<EOF > metrics-ingress.yaml
+  cat <<EOF > $DIR_PATH/gpu-operator/metrics-ingress.yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -832,8 +832,8 @@ spec:
       secretName: prod-tls
 EOF
 
-  kubectl apply -f metrics-ingress.yaml
-  rm -f metrics-ingress.yaml
+  kubectl apply -f $DIR_PATH/gpu-operator/metrics-ingress.yaml
+  rm -f $DIR_PATH/gpu-operator/metrics-ingress.yaml
 }
 set_up_file_manager () {
     FILEBROWSER_CONFIG_PATH=/etc/robolaunch/filebrowser;
