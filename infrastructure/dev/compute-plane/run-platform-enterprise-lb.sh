@@ -643,7 +643,8 @@ install_metrics_server () {
 install_ingress_nginx () {
     echo "controller:
   kind: Deployment
-  replicaCount: 3
+  replicaCount: 1
+  allowSnippetAnnotations: true
   ingressClassResource:
     name: nginx
     enabled: true
