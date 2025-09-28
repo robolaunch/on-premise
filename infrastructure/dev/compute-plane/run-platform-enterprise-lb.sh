@@ -708,10 +708,6 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-buffer-size: '16k'
     nginx.ingress.kubernetes.io/proxy-buffers-number: '4'
 spec:
-  tls:
-  - hosts:
-    - $SERVER_URL
-    secretName: prod-tls
   rules:
   - host: $SERVER_URL
     http:
@@ -832,10 +828,6 @@ spec:
                 name: nvidia-dcgm-exporter
                 port:
                   number: 9400
-  tls:
-    - hosts:
-        - ${SERVER_URL}
-      secretName: prod-tls
 EOF
 
   kubectl apply -f $DIR_PATH/gpu-operator/metrics-ingress.yaml
