@@ -645,6 +645,8 @@ install_ingress_nginx () {
   kind: Deployment
   replicaCount: 1
   allowSnippetAnnotations: true
+  config:
+    annotations-risk-level: Critical
   ingressClassResource:
     name: nginx
     enabled: true
