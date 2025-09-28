@@ -370,6 +370,7 @@ localprovisioner:
       --create-namespace \
       -f $DIR_PATH/openebs/values.yaml;
     sleep 5;
+	kubectl patch storageclass openebs-hostpath -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}';
     kubectl patch storageclass openebs-hostpath --type merge -p '{"metadata": {"annotations": {"cas.openebs.io/config": "- name: StorageType\n  value: \"hostpath\"\n- name: BasePath\n  value: \"/data/openebs/local\"","openebs.io/cas-type": "local"}}}'
 }
 install_nvidia_runtime_class () {
