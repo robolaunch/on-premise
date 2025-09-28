@@ -655,7 +655,7 @@ defaultBackend:
            --namespace ingress-nginx \
            --create-namespace \
            --version 4.12.6 \
-           -f $DIR_PATH/robolaunch/ingress-nginx/values.yaml
+           -f $DIR_PATH/ingress-nginx/values.yaml
      sleep 2;
 }
 install_oauth2_proxy () {
