@@ -261,12 +261,6 @@ set_up_nvidia_container_runtime () {
     apt-get update;
     apt-get install -y gnupg linux-headers-$(uname -r);
     apt-get install -y --no-install-recommends nvidia-driver-$NVIDIA_DRIVER_VERSION;
-    distribution=$(. /etc/os-release; echo $ID$VERSION_ID | sed -e 's/\.//g')
-    curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-docker-keyring.gpg
-    curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list |     sed 's/jammy/noble/' | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
-    curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list  | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-    sudo apt-get update
-    sudo apt install nvidia-container-runtime -y
     sleep 2
     driver_pkg=$(dpkg -l | grep -i '^ii' | grep -E 'nvidia-driver-[0-9]+' | awk '{print $2}')
     if [ -n "$driver_pkg" ]; then
@@ -933,7 +927,7 @@ EOF
     esac
   done
 
-  # Time-slicing ConfigMap (eğer ts varsa)
+  # Time-slicing ConfigMap 
   if [[ "$ts_used" == true ]]; then
     cat > ${TS_CONFIG_FILE} <<EOF
 apiVersion: v1
@@ -953,20 +947,20 @@ EOF
     kubectl apply -f ${TS_CONFIG_FILE}
   fi
 
-  # MIG ConfigMap (eğer mig varsa)
+  # MIG ConfigMap 
   if [[ "$mig_used" == true ]]; then
     kubectl apply -f ${MIG_CONFIG_FILE}
     kubectl label node ${NODE_NAME} nvidia.com/mig.config=custom-mig --overwrite
   fi
 
-  # values.yaml (senaryoya göre)
+  # values.yaml 
   cat > ${VALUES_FILE} <<EOF
 mig:
   strategy: mixed
 EOF
 
   if [[ "$ts_used" == true && "$mig_used" == true ]]; then
-    # MIG + TS beraber
+    # MIG + TS 
     cat >> ${VALUES_FILE} <<EOF
 devicePlugin:
   enabled: true
@@ -982,7 +976,7 @@ migManager:
     name: custom-mig-config
     default: ""
 toolkit:
-  enabled: false
+  enabled: true
 EOF
 
   elif [[ "$ts_used" == true ]]; then
@@ -998,7 +992,7 @@ devicePlugin:
 migManager:
   enabled: false
 toolkit:
-  enabled: false
+  enabled: true
 EOF
 
   elif [[ "$mig_used" == true ]]; then
@@ -1014,11 +1008,11 @@ migManager:
     name: custom-mig-config
     default: ""
 toolkit:
-  enabled: false
+  enabled: true
 EOF
 
   else
-    # Ne MIG ne TS (tamamen bare GPU’lar)
+    # No MIG no TS
     cat >> ${VALUES_FILE} <<EOF
 devicePlugin:
   enabled: true
@@ -1026,7 +1020,7 @@ devicePlugin:
 migManager:
   enabled: false
 toolkit:
-  enabled: false
+  enabled: true
 EOF
   fi
 
