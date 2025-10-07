@@ -29,8 +29,6 @@ REGION=$region_plain
 CLOUD_INSTANCE=$cloud_instance
 CLOUD_INSTANCE_ALIAS=$cloud_instance_alias
 CLUSTER_DOMAIN=$cloud_instance
-DESIRED_CLUSTER_CIDR=10.200.1.0/24
-DESIRED_SERVICE_CIDR=10.200.2.0/24
 OIDC_URL=https://$identity_subdomain.$root_domain/realms/robo-realm
 OIDC_ORGANIZATION_CLIENT_ID=operator-client
 OIDC_ORGANIZATION_CLIENT_SECRET=$org_client_secret
@@ -40,6 +38,12 @@ SERVER_URL=$CLOUD_INSTANCE.$DOMAIN
 GITHUB_PATH=$github_pat
 NVIDIA_DRIVER_VERSION="550" # $nvidia_driver_version
 CUSTOM_HOSTNAME=$custom_hostname
+CLOUD_PROVIDER=$cloud_provider
+
+if [ "$CLOUD_PROVIDER" != "default" ]; then
+    GROUP_SUPER_ADMIN=org_$CLOUD_PROVIDER"_super_admin"
+	GROUP=org_$org_name_plain
+fi							  
 
 if [ -n "$CUSTOM_HOSTNAME" ]; then
     SERVER_URL="$CUSTOM_HOSTNAME"
@@ -113,20 +117,7 @@ set_cloud_instance_alias () {
         CLOUD_INSTANCE_ALIAS=$CLOUD_INSTANCE_ALIAS;
     fi
 }
-set_desired_cluster_cidr () {
-    if [[ -z "${DESIRED_CLUSTER_CIDR}" ]]; then
-        print_err "DESIRED_CLUSTER_CIDR should be set";
-    else
-        DESIRED_CLUSTER_CIDR=$DESIRED_CLUSTER_CIDR;
-    fi
-}
-set_desired_service_cidr () {
-    if [[ -z "${DESIRED_SERVICE_CIDR}" ]]; then
-        print_err "DESIRED_SERVICE_CIDR should be set";
-    else
-        DESIRED_SERVICE_CIDR=$DESIRED_SERVICE_CIDR;
-    fi
-}
+
 set_public_ip () {
     if [[ -z "${PUBLIC_IP}" ]]; then
         PUBLIC_IP=$(curl https://ipinfo.io/ip);
@@ -154,8 +145,6 @@ check_inputs () {
     set_region;
     set_cloud_instance;
     set_cloud_instance_alias;
-    set_desired_cluster_cidr;
-    set_desired_service_cidr;
 }
 get_versioning_map () {
     wget -P $DIR_PATH https://raw.githubusercontent.com/robolaunch/robolaunch/main/platform.yaml;
@@ -273,12 +262,9 @@ set_up_nvidia_container_runtime () {
     apt-get update;
     apt-get install -y gnupg linux-headers-$(uname -r);
     apt-get install -y --no-install-recommends nvidia-driver-$NVIDIA_DRIVER_VERSION;
-    distribution=$(. /etc/os-release; echo $ID$VERSION_ID | sed -e 's/\.//g')
-    curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-docker-keyring.gpg
-    curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list |     sed 's/jammy/noble/' | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
-    curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
-    curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list |   sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' |   sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-    sudo apt-get update
+	curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo apt-key add -
+    echo "deb https://nvidia.github.io/libnvidia-container/stable/deb/amd64 /" | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+	sudo apt-get update
     sudo apt install nvidia-container-runtime -y
     sleep 2
     driver_pkg=$(dpkg -l | grep -i '^ii' | grep -E 'nvidia-driver-[0-9]+' | awk '{print $2}')
@@ -312,11 +298,8 @@ set_up_k3s () {
         K3S_KUBECONFIG_MODE="644" \
         INSTALL_K3S_EXEC="\
 	  --tls-san=$SERVER_URL \
-          --cluster-cidr=$DESIRED_CLUSTER_CIDR \
-          --service-cidr=$DESIRED_SERVICE_CIDR \
           --cluster-domain=$CLUSTER_DOMAIN.local \
           --disable-network-policy \
-          --disable=coredns \
           --disable=traefik \
           --disable=local-storage \
           --disable=metrics-server \
@@ -329,6 +312,8 @@ set_up_k3s () {
             oidc-username-claim=preferred_username \
           --kube-apiserver-arg \
             oidc-groups-claim=groups \
+		  --kubelet-arg \
+		    runtime-request-timeout=3h \	   
           $CERT_ARG" sh -;
     sleep 5;
 }
@@ -660,17 +645,15 @@ install_ingress_nginx () {
   service:
     type: NodePort
 defaultBackend:
-  enabled: true
-  image:
-    registry: quay.io
-    image: robolaunchio/defaultbackend-amd64
-    tag: 1.5" > $DIR_PATH/ingress-nginx/values.yaml;
-        helm upgrade --install \
-      ingress-nginx $DIR_PATH/ingress-nginx/ingress-nginx-4.7.1.tgz \
-      --namespace ingress-nginx \
-      --create-namespace \
-      -f $DIR_PATH/ingress-nginx/values.yaml
-        sleep 2;
+  enabled: true" > $DIR_PATH/ingress-nginx/values.yaml;
+     helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+     helm repo update
+     helm install ingress-nginx ingress-nginx/ingress-nginx \
+           --namespace ingress-nginx \
+           --create-namespace \
+           --version 4.12.6 \
+           -f $DIR_PATH/ingress-nginx/values.yaml
+     sleep 2;
 }
 install_oauth2_proxy () {
         echo "image:
@@ -817,7 +800,7 @@ spec:
 EOF
 }
 install_metrics_ingress () {
-  cat <<EOF > metrics-ingress.yaml
+  cat <<EOF > $DIR_PATH/gpu-operator/metrics-ingress.yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -846,8 +829,8 @@ spec:
       secretName: prod-tls
 EOF
 
-  kubectl apply -f metrics-ingress.yaml
-  rm -f metrics-ingress.yaml
+  kubectl apply -f $DIR_PATH/gpu-operator/metrics-ingress.yaml
+  rm -f $DIR_PATH/gpu-operator/metrics-ingress.yaml
 }
 set_up_file_manager () {
     FILEBROWSER_CONFIG_PATH=/etc/robolaunch/filebrowser;
@@ -966,7 +949,7 @@ EOF
     esac
   done
 
-  # Time-slicing ConfigMap (eğer ts varsa)
+  # Time-slicing ConfigMap
   if [[ "$ts_used" == true ]]; then
     cat > ${TS_CONFIG_FILE} <<EOF
 apiVersion: v1
@@ -986,7 +969,7 @@ EOF
     kubectl apply -f ${TS_CONFIG_FILE}
   fi
 
-  # MIG ConfigMap (eğer mig varsa)
+  # MIG ConfigMap
   if [[ "$mig_used" == true ]]; then
     kubectl apply -f ${MIG_CONFIG_FILE}
     kubectl label node ${NODE_NAME} nvidia.com/mig.config=custom-mig --overwrite
@@ -999,7 +982,7 @@ mig:
 EOF
 
   if [[ "$ts_used" == true && "$mig_used" == true ]]; then
-    # MIG + TS beraber
+    # MIG + TS
     cat >> ${VALUES_FILE} <<EOF
 devicePlugin:
   enabled: true
@@ -1051,7 +1034,7 @@ toolkit:
 EOF
 
   else
-    # Ne MIG ne TS (tamamen bare GPU’lar)
+    # No MIG no TS 
     cat >> ${VALUES_FILE} <<EOF
 devicePlugin:
   enabled: true
@@ -1122,7 +1105,7 @@ print_global_log "Creating super admin crb...";
 # print_global_log "Installing coredns...";
 # (install_coredns)
 print_global_log "Installing coredns...";
-(install_coredns_as_manifest)
+#(install_coredns_as_manifest)
 print_global_log "Installing metrics-server...";
 (install_metrics_server)
 print_global_log "Installing ingress...";
