@@ -29,7 +29,7 @@ REGION=$region_plain
 CLOUD_INSTANCE=$cloud_instance
 CLOUD_INSTANCE_ALIAS=$cloud_instance_alias
 CLUSTER_DOMAIN=$cloud_instance
-OIDC_URL=https://$identity_subdomain.$root_domain/realms/robo-realm
+OIDC_URL=https://$identity_subdomain.$root_domain/realms/$default_realm
 OIDC_ORGANIZATION_CLIENT_ID=operator-client
 OIDC_ORGANIZATION_CLIENT_SECRET=$org_client_secret
 COOKIE_SECRET=MFlZN1J5eitIdUplckJLaW55YlF6UjVlQ3lneFJBcEU=
