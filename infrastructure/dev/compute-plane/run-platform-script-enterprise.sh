@@ -312,9 +312,9 @@ set_up_k3s () {
             oidc-username-claim=preferred_username \
           --kube-apiserver-arg \
             oidc-groups-claim=groups \
-		  --kubelet-arg \
-		    runtime-request-timeout=3h \	   
-          $CERT_ARG" sh -;
+			--kubelet-arg \
+			runtime-request-timeout=3h \
+			$CERT_ARG" sh -;
     sleep 5;
 }
 check_cluster () {
