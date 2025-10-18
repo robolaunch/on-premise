@@ -36,7 +36,7 @@ COOKIE_SECRET=MFlZN1J5eitIdUplckJLaW55YlF6UjVlQ3lneFJBcEU=
 DOMAIN=$root_domain
 SERVER_URL=$CLOUD_INSTANCE.$DOMAIN
 GITHUB_PATH=$github_pat
-NVIDIA_DRIVER_VERSION="550" # $nvidia_driver_version
+NVIDIA_DRIVER_VERSION="580" # $nvidia_driver_version
 CUSTOM_HOSTNAME=$custom_hostname
 CLOUD_PROVIDER=$cloud_provider
 
