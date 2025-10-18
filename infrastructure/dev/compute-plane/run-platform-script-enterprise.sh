@@ -1054,6 +1054,161 @@ EOF
     --version=${HELM_VERSION}
 }
 
+install_monitoring_stack () {
+    print_log "Installing Kube-Prometheus-Stack (Prometheus + Grafana)..."
+
+    local NAMESPACE="gpu-operator"
+    local CHART_VERSION="77.14.0"
+    local VALUES_FILE="$DIR_PATH/gpu-operator/values-monitoring.yaml"
+
+    helm repo add prometheus-community https://prometheus-community.github.io/helm-charts || true
+    helm repo update
+
+    # Dynamic values.yaml
+    cat > $VALUES_FILE <<EOF
+grafana:
+  enabled: false
+
+prometheus:
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/rewrite-target: /$2
+      nginx.ingress.kubernetes.io/use-regex: "true"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    hosts:
+      - ${SERVER_URL}
+    paths:
+      - /prometheus(/|$)(.*)
+    pathType: ImplementationSpecific
+    tls:
+      - secretName: prod-tls
+        hosts:
+          - ${SERVER_URL}
+
+  service:
+    type: ClusterIP
+
+  prometheusSpec:
+    externalUrl: https://${SERVER_URL}/prometheus/
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    scrapeInterval: 15s
+    evaluationInterval: 30s
+    retention: 7d
+    retentionSize: "40GiB"
+    walCompression: true
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          resources:
+            requests:
+              storage: 50Gi
+
+  additionalServiceMonitors:
+    - name: nvidia-dcgm-exporter
+      selector:
+        matchLabels:
+          app: nvidia-dcgm-exporter
+      namespaceSelector:
+        matchNames:
+          - gpu-operator
+      endpoints:
+        - port: gpu-metrics
+          interval: 30s
+
+alertmanager:
+  enabled: false
+
+nodeExporter:
+  enabled: true
+
+kubelet:
+  enabled: true
+  serviceMonitor:
+    metricRelabelings: []
+    relabelings: []
+
+prometheusOperator:
+  enabled: true
+
+kubeStateMetrics:
+  enabled: true
+kubernetesServiceMonitors:
+  enabled: true
+kubeApiServer:
+  enabled: true
+kubeControllerManager:
+  enabled: true
+kubeScheduler:
+  enabled: true
+kubeProxy:
+  enabled: true
+coreDns:
+  enabled: true
+EOF
+
+    # Helm installation with retry loop for robustness
+    MONITORING_HELM_INSTALL_SUCCEEDED="false"
+    while [ "$MONITORING_HELM_INSTALL_SUCCEEDED" != "true" ]; do
+        MONITORING_HELM_INSTALL_SUCCEEDED="true"
+        helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+          -n $NAMESPACE \
+          --create-namespace \
+          --version $CHART_VERSION \
+          -f $VALUES_FILE || MONITORING_HELM_INSTALL_SUCCEEDED="false"
+        sleep 3
+    done
+
+    rm -f $VALUES_FILE
+    print_log "Kube-Prometheus-Stack installed successfully in namespace $NAMESPACE."
+}
+
+prepare_offline_packages () {
+    print_log "Preparing local offline packages for code-server, JupyterLab, ttyd, and FileBrowser..."
+
+    local BASE_DIR="/data/robolaunch/offline-packages"
+    local CODE_VERSION="4.104.2"    # https://github.com/coder/code-server/releases
+    local TTYD_VERSION="1.7.7"      # https://github.com/tsl0922/ttyd/releases
+    local FB_VERSION="v2.44.0"      # https://github.com/filebrowser/filebrowser/releases
+
+    mkdir -p ${BASE_DIR}/{code-server,jupyter,ttyd,filebrowser}
+
+    # --- CODE-SERVER ---
+    print_log "📦 Downloading code-server ${CODE_VERSION}..."
+    cd ${BASE_DIR}/code-server
+    wget -q https://github.com/coder/code-server/releases/download/v${CODE_VERSION}/code-server-${CODE_VERSION}-linux-amd64.tar.gz
+    tar -xzf code-server-${CODE_VERSION}-linux-amd64.tar.gz
+    mv code-server-${CODE_VERSION}-linux-amd64/bin/code-server .
+    rm -rf code-server-${CODE_VERSION}-linux-amd64*
+    chmod +x code-server
+
+    # --- JUPYTER ---
+    print_log "📦 Downloading JupyterLab dependencies..."
+    cd ${BASE_DIR}/jupyter
+    apt-get update -y >/dev/null 2>&1
+    apt-get install -y python3-pip >/dev/null 2>&1
+    pip download jupyterlab==4.4.8 -d .
+
+    # --- TTYD ---
+    print_log "📦 Downloading ttyd ${TTYD_VERSION}..."
+    cd ${BASE_DIR}/ttyd
+    wget -q https://github.com/tsl0922/ttyd/releases/download/${TTYD_VERSION}/ttyd.x86_64 -O ttyd
+    chmod +x ttyd
+
+    # --- FILEBROWSER ---
+    print_log "📦 Downloading FileBrowser ${FB_VERSION}..."
+    cd ${BASE_DIR}/filebrowser
+    wget -q https://github.com/filebrowser/filebrowser/releases/download/${FB_VERSION}/linux-amd64-filebrowser.tar.gz
+    tar -xzf linux-amd64-filebrowser.tar.gz
+    rm -f linux-amd64-filebrowser.tar.gz
+
+    print_log "✅ Offline packages are ready under ${BASE_DIR}."
+}
+
 ##############################################################
 ##############################################################
 ##############################################################
@@ -1122,11 +1277,15 @@ print_global_log "Installing NVIDIA runtime...";
 (install_nvidia_runtime_class)
 print_global_log "Installing NVIDIA gpu operator...";
 (configure_gpu_operator)
+print_global_log "Installing Monitoring Stack..."
+(install_monitoring_stack)
+print_global_log "Preparing offline packages..."
+(prepare_offline_packages)
 #print_global_log "Installing robolaunch Operator Suite...";
 #(install_operator_suite)
-print_global_log "Deploying MetricsExporter namespace...";
+#print_global_log "Deploying MetricsExporter namespace...";
 #(deploy_metrics_namespace)
-print_global_log "Installing NVIDIA DCGM exporter...";
+#print_global_log "Installing NVIDIA DCGM exporter...";
 #(install_nvidia_dcgm_exporter)
 #print_global_log "Deploying MetricsExporter...";
 #(deploy_metrics_exporter)
