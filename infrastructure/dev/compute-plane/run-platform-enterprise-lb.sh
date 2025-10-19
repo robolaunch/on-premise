@@ -1040,7 +1040,7 @@ EOF
 install_monitoring_stack () {
     print_log "🚀 Installing Kube-Prometheus-Stack (Prometheus + Grafana)..."
 
-    local NAMESPACE="gpu-operator"
+    local NAMESPACE="monitoring"
     local CHART_VERSION="77.14.0"
     local VALUES_FILE="$DIR_PATH/gpu-operator/values-monitoring.yaml"
 
@@ -1189,8 +1189,6 @@ prepare_offline_packages () {
 apply_nvidia_dcgm_servicemonitor () {
     print_log "📡 Applying ServiceMonitor for NVIDIA DCGM Exporter..."
 
-    local NAMESPACE="gpu-operator"
-
     # ServiceMonitor CRD mevcut mu kontrol et
     if ! kubectl get crd servicemonitors.monitoring.coreos.com &>/dev/null; then
         print_err "❌ ServiceMonitor CRD not found. Prometheus Operator may not be installed yet."
@@ -1203,7 +1201,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: nvidia-dcgm-exporter
-  namespace: ${NAMESPACE}
+  namespace: monitoring
   labels:
     release: kube-prometheus-stack
     app.kubernetes.io/instance: kube-prometheus-stack
@@ -1212,7 +1210,7 @@ spec:
     matchLabels:
       app: nvidia-dcgm-exporter
   namespaceSelector:
-    matchNames: [ ${NAMESPACE} ]
+    matchNames: [ gpu-operator ]
   endpoints:
     - port: gpu-metrics
       interval: 30s
