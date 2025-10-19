@@ -1093,6 +1093,7 @@ prometheus:
 
   prometheusSpec:
     externalUrl: https://${SERVER_URL}/prometheus/
+	routePrefix: /prometheus
     serviceMonitorSelectorNilUsesHelmValues: false
     podMonitorSelectorNilUsesHelmValues: false
     ruleSelectorNilUsesHelmValues: false
