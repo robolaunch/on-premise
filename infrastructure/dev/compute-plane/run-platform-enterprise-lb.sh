@@ -1091,18 +1091,6 @@ prometheus:
             requests:
               storage: 50Gi
 
-  additionalServiceMonitors:
-    - name: nvidia-dcgm-exporter
-      selector:
-        matchLabels:
-          app: nvidia-dcgm-exporter
-      namespaceSelector:
-        matchNames:
-          - gpu-operator
-      endpoints:
-        - port: gpu-metrics
-          interval: 30s
-
 alertmanager:
   enabled: false
 
@@ -1148,6 +1136,30 @@ EOF
 
     rm -f $VALUES_FILE
     print_log "Kube-Prometheus-Stack installed successfully in namespace $NAMESPACE."
+
+    # --- ✅ GPU ServiceMonitor fix ---
+    print_log "Applying ServiceMonitor for NVIDIA DCGM Exporter..."
+    cat <<EOF | kubectl apply -f -
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: nvidia-dcgm-exporter
+  namespace: gpu-operator
+  labels:
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: nvidia-dcgm-exporter
+  namespaceSelector:
+    matchNames:
+      - gpu-operator
+  endpoints:
+    - port: gpu-metrics
+      interval: 30s
+EOF
+
+    print_log "ServiceMonitor for DCGM Exporter applied successfully."
 }
 
 prepare_offline_packages () {
