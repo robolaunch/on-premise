@@ -1280,16 +1280,16 @@ print_global_log "Creating super admin crb...";
 # (install_coredns)
 #print_global_log "Installing coredns...";
 #(install_coredns_as_manifest)
-print_global_log "Installing metrics-server...";
-(install_metrics_server)
+#print_global_log "Installing metrics-server...";
+#(install_metrics_server)
 print_global_log "Installing ingress...";
 (install_ingress_nginx)
 print_global_log "Installing oauth2-proxy...";
 (install_oauth2_proxy)
 print_global_log "Installing openebs...";
 (install_openebs)
-print_global_log "Installing cert-manager...";
-(install_cert_manager)
+#print_global_log "Installing cert-manager...";
+#(install_cert_manager)
 print_global_log "Installing proxy-ingress...";
 (install_proxy_ingress)
 print_global_log "Installing NVIDIA runtime...";
@@ -1310,7 +1310,7 @@ print_global_log "Applyinng service monitor..."
 #(install_nvidia_dcgm_exporter)
 #print_global_log "Deploying MetricsExporter...";
 #(deploy_metrics_exporter)
-print_global_log "Deploying Metrics Ingress...";
-(install_metrics_ingress)
+#print_global_log "Deploying Metrics Ingress...";
+#(install_metrics_ingress)
 #print_global_log "Setting up file manager...";
 #(set_up_file_manager)
