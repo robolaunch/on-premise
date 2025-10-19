@@ -1055,19 +1055,21 @@ EOF
 }
 
 install_monitoring_stack () {
-  print_log "Installing Kube-Prometheus-Stack (Prometheus + Grafana)..."
+    print_log "Installing Kube-Prometheus-Stack (Prometheus + Grafana)..."
 
-  local NAMESPACE="gpu-operator"
-  local CHART_VERSION="77.14.0"
-  local VALUES_FILE="$DIR_PATH/gpu-operator/values-monitoring.yaml"
+    local NAMESPACE="gpu-operator"
+    local CHART_VERSION="77.14.0"
+    local VALUES_FILE="$DIR_PATH/gpu-operator/values-monitoring.yaml"
 
-  helm repo add prometheus-community https://prometheus-community.github.io/helm-charts || true
-  helm repo update
+    # --- Add & update Helm repo ---
+    helm repo add prometheus-community https://prometheus-community.github.io/helm-charts || true
+    helm repo update
 
-  # --- values.yaml oluştur ---
-  cat > "$VALUES_FILE" <<EOF
+    # --- Dynamic values.yaml ---
+    cat > $VALUES_FILE <<EOF
 grafana:
   enabled: false
+
 prometheus:
   ingress:
     enabled: true
@@ -1075,20 +1077,25 @@ prometheus:
     annotations:
       nginx.ingress.kubernetes.io/ssl-redirect: "true"
       nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
-    hosts: [ ${SERVER_URL} ]
-    paths: [ /prometheus ]
+    hosts:
+      - ${SERVER_URL}
+    paths:
+      - /prometheus
     pathType: Prefix
     tls:
       - secretName: prod-tls
-        hosts: [ ${SERVER_URL} ]
+        hosts:
+          - ${SERVER_URL}
+
   service:
     type: ClusterIP
+
   prometheusSpec:
     externalUrl: https://${SERVER_URL}/prometheus/
     routePrefix: /prometheus
-    serviceMonitorSelector: {}
-    serviceMonitorNamespaceSelector:
-      matchNames: [ ${NAMESPACE} ]
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
     scrapeInterval: 15s
     evaluationInterval: 30s
     retention: 7d
@@ -1100,52 +1107,70 @@ prometheus:
           resources:
             requests:
               storage: 50Gi
-alertmanager: { enabled: false }
-nodeExporter: { enabled: true }
-kubelet: { enabled: true }
-prometheusOperator: { enabled: true }
-kubeStateMetrics: { enabled: true }
-kubernetesServiceMonitors: { enabled: true }
-kubeApiServer: { enabled: true }
-kubeControllerManager: { enabled: true }
-kubeScheduler: { enabled: true }
-kubeProxy: { enabled: true }
-coreDns: { enabled: true }
+
+alertmanager:
+  enabled: false
+nodeExporter:
+  enabled: true
+kubelet:
+  enabled: true
+prometheusOperator:
+  enabled: true
+kubeStateMetrics:
+  enabled: true
+kubernetesServiceMonitors:
+  enabled: true
+kubeApiServer:
+  enabled: true
+kubeControllerManager:
+  enabled: true
+kubeScheduler:
+  enabled: true
+kubeProxy:
+  enabled: true
+coreDns:
+  enabled: true
 EOF
 
-  # --- helm install / upgrade ---
-  local OK=false
-  until $OK; do
-    if helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
-      -n "$NAMESPACE" --create-namespace --version "$CHART_VERSION" -f "$VALUES_FILE"; then
-      OK=true
-    else
-      sleep 5
-    fi
-  done
-  rm -f "$VALUES_FILE"
-  print_log "✅ Kube-Prometheus-Stack installed successfully in namespace $NAMESPACE."
+    # --- Helm install (retry if needed) ---
+    MONITORING_HELM_INSTALL_SUCCEEDED="false"
+    while [ "$MONITORING_HELM_INSTALL_SUCCEEDED" != "true" ]; do
+        MONITORING_HELM_INSTALL_SUCCEEDED="true"
+        helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+          -n $NAMESPACE \
+          --create-namespace \
+          --version $CHART_VERSION \
+          -f $VALUES_FILE || MONITORING_HELM_INSTALL_SUCCEEDED="false"
+        sleep 5
+    done
 
-  # --- Operator pod'u bekle ---
-  print_log "⏳ Waiting for Prometheus Operator pod to become Ready..."
-  kubectl wait --for=condition=ready pod \
-    -l app.kubernetes.io/name=kube-prometheus-stack-prometheus-operator,app.kubernetes.io/instance=kube-prometheus-stack \
-    -n "$NAMESPACE" --timeout=180s || print_err "❌ Prometheus Operator pod not ready."
+    rm -f $VALUES_FILE
+    print_log "✅ Kube-Prometheus-Stack installed successfully in namespace $NAMESPACE."
 
-  # --- Prometheus pod'u bekle ---
-  print_log "⏳ Waiting for Prometheus pod to become Ready..."
-  kubectl wait --for=condition=ready pod \
-    -l app.kubernetes.io/name=prometheus,app.kubernetes.io/instance=kube-prometheus-stack-prometheus \
-    -n "$NAMESPACE" --timeout=180s || print_err "❌ Prometheus pod not ready."
+    # --- Wait for Operator pod ---
+    print_log "⏳ Waiting for Prometheus Operator pod to become Ready..."
+    kubectl wait --for=condition=ready pod \
+        -l app.kubernetes.io/name=kube-prometheus-stack-prometheus-operator \
+        -n $NAMESPACE --timeout=180s \
+        || print_err "❌ Prometheus Operator pod not ready."
 
-  # --- CRD bekle ---
-  print_log "⏳ Waiting for ServiceMonitor CRD..."
-  until kubectl get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1; do sleep 2; done
-  print_log "✅ ServiceMonitor CRD detected."
+    # --- Wait for Prometheus pod ---
+    print_log "⏳ Waiting for Prometheus pod to become Ready..."
+    kubectl wait --for=condition=ready pod \
+        -l app.kubernetes.io/instance=kube-prometheus-stack-prometheus \
+        -n $NAMESPACE --timeout=180s \
+        || print_err "❌ Prometheus pod not ready."
 
-  # --- DCGM ServiceMonitor oluştur ---
-  print_log "📡 Applying ServiceMonitor for NVIDIA DCGM Exporter..."
-  cat <<EOF | kubectl apply -f -
+    # --- Wait for ServiceMonitor CRD ---
+    print_log "⏳ Waiting for ServiceMonitor CRD..."
+    until kubectl get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1; do
+        sleep 2
+    done
+    print_log "✅ ServiceMonitor CRD detected."
+
+    # --- Apply NVIDIA DCGM ServiceMonitor (verified stable version) ---
+    print_log "📡 Applying ServiceMonitor for NVIDIA DCGM Exporter..."
+    cat <<EOF | kubectl apply -f -
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
@@ -1165,12 +1190,15 @@ spec:
       interval: 30s
 EOF
 
-  # --- doğrula ---
-  print_log "🔍 Verifying ServiceMonitor existence..."
-  kubectl get servicemonitor nvidia-dcgm-exporter -n "${NAMESPACE}" >/dev/null 2>&1 \
-    && print_log "✅ ServiceMonitor present." \
-    || print_err "❌ ServiceMonitor not found after apply."
+    # --- Verify ServiceMonitor existence ---
+    print_log "🔍 Verifying ServiceMonitor existence..."
+    if kubectl get servicemonitor nvidia-dcgm-exporter -n "${NAMESPACE}" >/dev/null 2>&1; then
+        print_log "✅ ServiceMonitor present."
+    else
+        print_err "❌ ServiceMonitor not found after apply."
+    fi
 }
+
 
 prepare_offline_packages () {
     print_log "Preparing local offline packages for code-server, JupyterLab, ttyd, and FileBrowser..."
