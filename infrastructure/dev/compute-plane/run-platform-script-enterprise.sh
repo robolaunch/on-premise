@@ -1079,7 +1079,7 @@ prometheus:
     hosts:
       - ${SERVER_URL}
     paths:
-      - /prometheus(/|$)(.*)
+      - /prometheus
     pathType: Prefix
     tls:
       - secretName: prod-tls
