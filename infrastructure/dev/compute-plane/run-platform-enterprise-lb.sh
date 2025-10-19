@@ -1218,7 +1218,7 @@ EOF
 
     # Doğrulama
     print_log "🔍 Verifying ServiceMonitor existence..."
-    if kubectl get servicemonitor nvidia-dcgm-exporter -n ${NAMESPACE} &>/dev/null; then
+    if kubectl get servicemonitor nvidia-dcgm-exporter -n monitoring &>/dev/null; then
         print_log "✅ ServiceMonitor 'nvidia-dcgm-exporter' successfully applied and active."
     else
         print_err "❌ Failed to create ServiceMonitor 'nvidia-dcgm-exporter'."
