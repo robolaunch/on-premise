@@ -1064,7 +1064,7 @@ install_monitoring_stack () {
     helm repo add prometheus-community https://prometheus-community.github.io/helm-charts || true
     helm repo update
 
-    # --- Dynamic values.yaml with integrated ServiceMonitor ---
+    # --- Dynamic values.yaml ---
     cat > $VALUES_FILE <<EOF
 grafana:
   enabled: false
@@ -1089,6 +1089,19 @@ prometheus:
   service:
     type: ClusterIP
 
+  ## ✅ additionalServiceMonitors doğru seviye: prometheus altında!
+  additionalServiceMonitors:
+    - name: nvidia-dcgm-exporter
+      selector:
+        matchLabels:
+          app: nvidia-dcgm-exporter
+      namespaceSelector:
+        matchNames:
+          - gpu-operator
+      endpoints:
+        - port: gpu-metrics
+          interval: 30s
+
   prometheusSpec:
     externalUrl: https://${SERVER_URL}/prometheus/
     routePrefix: /prometheus
@@ -1106,17 +1119,6 @@ prometheus:
           resources:
             requests:
               storage: 50Gi
-    additionalServiceMonitors:
-      - name: nvidia-dcgm-exporter
-        selector:
-          matchLabels:
-            app: nvidia-dcgm-exporter
-        namespaceSelector:
-          matchNames:
-            - gpu-operator
-        endpoints:
-          - port: gpu-metrics
-            interval: 30s
 
 alertmanager:
   enabled: false
@@ -1193,7 +1195,6 @@ EOF
         print_err "❌ ServiceMonitor not found — check additionalServiceMonitors configuration."
     fi
 }
-
 
 prepare_offline_packages () {
     print_log "Preparing local offline packages for code-server, JupyterLab, ttyd, and FileBrowser..."
