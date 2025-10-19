@@ -1058,15 +1058,13 @@ prometheus:
     enabled: true
     ingressClassName: nginx
     annotations:
-      nginx.ingress.kubernetes.io/rewrite-target: /$2
-      nginx.ingress.kubernetes.io/use-regex: "true"
       nginx.ingress.kubernetes.io/ssl-redirect: "true"
       nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
     hosts:
       - ${SERVER_URL}
     paths:
-      - /prometheus(/|$)(.*)
-    pathType: ImplementationSpecific
+      - /prometheus
+    pathType: Prefix
     tls:
       - secretName: prod-tls
         hosts:
@@ -1077,7 +1075,7 @@ prometheus:
 
   prometheusSpec:
     externalUrl: https://${SERVER_URL}/prometheus/
-	routePrefix: /prometheus
+    routePrefix: /prometheus
     serviceMonitorSelectorNilUsesHelmValues: false
     podMonitorSelectorNilUsesHelmValues: false
     ruleSelectorNilUsesHelmValues: false
