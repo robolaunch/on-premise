@@ -1048,7 +1048,7 @@ install_monitoring_stack () {
     helm repo add prometheus-community https://prometheus-community.github.io/helm-charts || true
     helm repo update
 
-    # --- Dynamic values.yaml with integrated ServiceMonitor ---
+    # --- Dynamic values.yaml ---
     cat > $VALUES_FILE <<EOF
 grafana:
   enabled: false
@@ -1073,6 +1073,19 @@ prometheus:
   service:
     type: ClusterIP
 
+  ## ✅ additionalServiceMonitors doğru seviye: prometheus altında!
+  additionalServiceMonitors:
+    - name: nvidia-dcgm-exporter
+      selector:
+        matchLabels:
+          app: nvidia-dcgm-exporter
+      namespaceSelector:
+        matchNames:
+          - gpu-operator
+      endpoints:
+        - port: gpu-metrics
+          interval: 30s
+
   prometheusSpec:
     externalUrl: https://${SERVER_URL}/prometheus/
     routePrefix: /prometheus
@@ -1090,17 +1103,6 @@ prometheus:
           resources:
             requests:
               storage: 50Gi
-    additionalServiceMonitors:
-      - name: nvidia-dcgm-exporter
-        selector:
-          matchLabels:
-            app: nvidia-dcgm-exporter
-        namespaceSelector:
-          matchNames:
-            - gpu-operator
-        endpoints:
-          - port: gpu-metrics
-            interval: 30s
 
 alertmanager:
   enabled: false
@@ -1177,16 +1179,6 @@ EOF
         print_err "❌ ServiceMonitor not found — check additionalServiceMonitors configuration."
     fi
 }
-
-    # --- Verify ServiceMonitor existence ---
-    print_log "🔍 Verifying ServiceMonitor existence..."
-    if kubectl get servicemonitor nvidia-dcgm-exporter -n "${NAMESPACE}" >/dev/null 2>&1; then
-        print_log "✅ ServiceMonitor present."
-    else
-        print_err "❌ ServiceMonitor not found after apply."
-    fi
-}
-
 
 prepare_offline_packages () {
     print_log "Preparing local offline packages for code-server, JupyterLab, ttyd, and FileBrowser..."
