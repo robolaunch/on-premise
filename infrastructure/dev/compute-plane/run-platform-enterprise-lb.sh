@@ -1130,29 +1130,23 @@ EOF
     rm -f $VALUES_FILE
     print_log "✅ Kube-Prometheus-Stack installed successfully in namespace $NAMESPACE."
 
-    # --- Smart wait for ServiceMonitor CRD ---
-    print_log "⏳ Waiting for ServiceMonitor CRD to become available..."
-
+    # --- Wait for Prometheus Operator pod to be Ready ---
+    print_log "⏳ Waiting for Prometheus Operator pod to become Ready..."
+    local timeout=180
     local waited=0
-    local step=3
-    local max_wait=90   # 90 seconds total (adjusts dynamically)
-
-    # first check quickly
-    until kubectl get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1; do
-        if (( waited >= max_wait )); then
-            print_err "❌ ServiceMonitor CRD not available after ${max_wait}s. Aborting."
+    while true; do
+        ready_pods=$(kubectl get pods -n $NAMESPACE -l app.kubernetes.io/name=prometheus-operator -o jsonpath='{range .items[*]}{.metadata.name}:{.status.containerStatuses[*].ready}{"\n"}{end}' 2>/dev/null)
+        if echo "$ready_pods" | grep -q "true"; then
+            print_log "✅ Prometheus Operator pod is Ready (waited ${waited}s)."
+            break
         fi
-
-        # check if prometheus-operator pod is starting (to show progress)
-        local operator_status
-        operator_status=$(kubectl get pods -n $NAMESPACE -l app.kubernetes.io/name=prometheus-operator -o jsonpath='{.items[0].status.phase}' 2>/dev/null || echo "not-found")
-
-        print_log "🕐 Waiting (${waited}s)... Prometheus Operator status: ${operator_status}"
-        sleep $step
-        ((waited+=step))
+        if (( waited >= timeout )); then
+            print_err "❌ Prometheus Operator pod not ready after ${timeout}s."
+        fi
+        print_log "🕐 Waiting (${waited}s)... Prometheus Operator not ready yet."
+        sleep 5
+        ((waited+=5))
     done
-
-    print_log "✅ ServiceMonitor CRD detected after ${waited}s."
 
     # --- Apply GPU ServiceMonitor ---
     print_log "📡 Applying ServiceMonitor for NVIDIA DCGM Exporter..."
@@ -1178,6 +1172,7 @@ EOF
 
     print_log "✅ ServiceMonitor for DCGM Exporter applied successfully."
 }
+
 
 prepare_offline_packages () {
     print_log "Preparing local offline packages for code-server, JupyterLab, ttyd, and FileBrowser..."
