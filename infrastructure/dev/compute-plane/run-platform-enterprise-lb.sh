@@ -301,7 +301,6 @@ set_up_k3s () {
           --disable-network-policy \
           --disable=traefik \
           --disable=local-storage \
-          --disable=metrics-server \
 		  --data-dir=/data/lib/ \
           --pause-image=quay.io/robolaunchio/mirrored-pause:3.6 \
           --kube-apiserver-arg \
