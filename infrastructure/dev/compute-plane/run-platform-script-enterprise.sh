@@ -1055,17 +1055,16 @@ EOF
 }
 
 install_monitoring_stack () {
-    print_log "Installing Kube-Prometheus-Stack (Prometheus + Grafana)..."
+    print_log "📦 Installing Kube-Prometheus-Stack (Prometheus + Grafana)..."
 
     local NAMESPACE="gpu-operator"
     local CHART_VERSION="77.14.0"
     local VALUES_FILE="$DIR_PATH/gpu-operator/values-monitoring.yaml"
 
-    # --- Add & update Helm repo ---
     helm repo add prometheus-community https://prometheus-community.github.io/helm-charts || true
     helm repo update
 
-    # --- Dynamic values.yaml ---
+    # --- Dynamic values.yaml with integrated ServiceMonitor ---
     cat > $VALUES_FILE <<EOF
 grafana:
   enabled: false
@@ -1107,6 +1106,17 @@ prometheus:
           resources:
             requests:
               storage: 50Gi
+    additionalServiceMonitors:
+      - name: nvidia-dcgm-exporter
+        selector:
+          matchLabels:
+            app: nvidia-dcgm-exporter
+        namespaceSelector:
+          matchNames:
+            - gpu-operator
+        endpoints:
+          - port: gpu-metrics
+            interval: 30s
 
 alertmanager:
   enabled: false
@@ -1147,55 +1157,40 @@ EOF
     rm -f $VALUES_FILE
     print_log "✅ Kube-Prometheus-Stack installed successfully in namespace $NAMESPACE."
 
-    # --- Wait for Operator pod ---
+    # --- Wait for Prometheus Operator to be Ready ---
     print_log "⏳ Waiting for Prometheus Operator pod to become Ready..."
     kubectl wait --for=condition=ready pod \
         -l app.kubernetes.io/name=kube-prometheus-stack-prometheus-operator \
         -n $NAMESPACE --timeout=180s \
         || print_err "❌ Prometheus Operator pod not ready."
 
-    # --- Wait for Prometheus pod ---
+    # --- Wait for Prometheus itself to be Ready ---
     print_log "⏳ Waiting for Prometheus pod to become Ready..."
     kubectl wait --for=condition=ready pod \
         -l app.kubernetes.io/instance=kube-prometheus-stack-prometheus \
         -n $NAMESPACE --timeout=180s \
         || print_err "❌ Prometheus pod not ready."
 
-    # --- Wait for ServiceMonitor CRD ---
+    # --- Verify ServiceMonitor CRD availability ---
     print_log "⏳ Waiting for ServiceMonitor CRD..."
-    until kubectl get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1; do
+    local timeout=60
+    until kubectl get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1 || [ $timeout -eq 0 ]; do
         sleep 2
+        ((timeout--))
     done
-    print_log "✅ ServiceMonitor CRD detected."
-
-    # --- Apply NVIDIA DCGM ServiceMonitor (verified stable version) ---
-    print_log "📡 Applying ServiceMonitor for NVIDIA DCGM Exporter..."
-    cat <<EOF | kubectl apply -f -
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: nvidia-dcgm-exporter
-  namespace: ${NAMESPACE}
-  labels:
-    release: kube-prometheus-stack
-    app.kubernetes.io/instance: kube-prometheus-stack
-spec:
-  selector:
-    matchLabels:
-      app: nvidia-dcgm-exporter
-  namespaceSelector:
-    matchNames: [ ${NAMESPACE} ]
-  endpoints:
-    - port: gpu-metrics
-      interval: 30s
-EOF
-
-    # --- Verify ServiceMonitor existence ---
-    print_log "🔍 Verifying ServiceMonitor existence..."
-    if kubectl get servicemonitor nvidia-dcgm-exporter -n "${NAMESPACE}" >/dev/null 2>&1; then
-        print_log "✅ ServiceMonitor present."
+    if kubectl get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1; then
+        print_log "✅ ServiceMonitor CRD detected."
     else
-        print_err "❌ ServiceMonitor not found after apply."
+        print_err "❌ ServiceMonitor CRD not found after waiting."
+    fi
+
+    # --- Verify Helm-created ServiceMonitor existence ---
+    print_log "🔍 Verifying Helm-created ServiceMonitor..."
+    sleep 10
+    if kubectl get servicemonitor nvidia-dcgm-exporter -n "${NAMESPACE}" >/dev/null 2>&1; then
+        print_log "✅ ServiceMonitor for NVIDIA DCGM Exporter present (Helm-managed)."
+    else
+        print_err "❌ ServiceMonitor not found — check additionalServiceMonitors configuration."
     fi
 }
 
