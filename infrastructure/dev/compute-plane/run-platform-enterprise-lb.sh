@@ -1048,6 +1048,7 @@ install_monitoring_stack () {
     helm repo add prometheus-community https://prometheus-community.github.io/helm-charts || true
     helm repo update
 
+    # --- Dynamic values.yaml ---
     cat > $VALUES_FILE <<EOF
 grafana:
   enabled: false
@@ -1114,7 +1115,7 @@ coreDns:
   enabled: true
 EOF
 
-    # Helm install (retry if needed)
+    # --- Helm install (retry if needed) ---
     MONITORING_HELM_INSTALL_SUCCEEDED="false"
     while [ "$MONITORING_HELM_INSTALL_SUCCEEDED" != "true" ]; do
         MONITORING_HELM_INSTALL_SUCCEEDED="true"
@@ -1129,17 +1130,29 @@ EOF
     rm -f $VALUES_FILE
     print_log "✅ Kube-Prometheus-Stack installed successfully in namespace $NAMESPACE."
 
-    # --- Wait for ServiceMonitor CRD to be ready ---
-    print_log "⏳ Waiting for ServiceMonitor CRD to be available..."
-    local timeout=10
-    until kubectl get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1 || [ $timeout -eq 0 ]; do
-        sleep 2
-        ((timeout--))
+    # --- Smart wait for ServiceMonitor CRD ---
+    print_log "⏳ Waiting for ServiceMonitor CRD to become available..."
+
+    local waited=0
+    local step=3
+    local max_wait=90   # 90 seconds total (adjusts dynamically)
+
+    # first check quickly
+    until kubectl get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1; do
+        if (( waited >= max_wait )); then
+            print_err "❌ ServiceMonitor CRD not available after ${max_wait}s. Aborting."
+        fi
+
+        # check if prometheus-operator pod is starting (to show progress)
+        local operator_status
+        operator_status=$(kubectl get pods -n $NAMESPACE -l app.kubernetes.io/name=prometheus-operator -o jsonpath='{.items[0].status.phase}' 2>/dev/null || echo "not-found")
+
+        print_log "🕐 Waiting (${waited}s)... Prometheus Operator status: ${operator_status}"
+        sleep $step
+        ((waited+=step))
     done
 
-    if ! kubectl get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1; then
-        print_err "❌ ServiceMonitor CRD could not be found. Exiting."
-    fi
+    print_log "✅ ServiceMonitor CRD detected after ${waited}s."
 
     # --- Apply GPU ServiceMonitor ---
     print_log "📡 Applying ServiceMonitor for NVIDIA DCGM Exporter..."
