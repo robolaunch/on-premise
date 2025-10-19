@@ -1064,7 +1064,6 @@ install_monitoring_stack () {
     helm repo add prometheus-community https://prometheus-community.github.io/helm-charts || true
     helm repo update
 
-    # Dynamic values.yaml
     cat > $VALUES_FILE <<EOF
 grafana:
   enabled: false
@@ -1109,19 +1108,12 @@ prometheus:
 
 alertmanager:
   enabled: false
-
 nodeExporter:
   enabled: true
-
 kubelet:
   enabled: true
-  serviceMonitor:
-    metricRelabelings: []
-    relabelings: []
-
 prometheusOperator:
   enabled: true
-
 kubeStateMetrics:
   enabled: true
 kubernetesServiceMonitors:
@@ -1138,7 +1130,7 @@ coreDns:
   enabled: true
 EOF
 
-    # Helm installation with retry loop for robustness
+    # Helm install (retry if needed)
     MONITORING_HELM_INSTALL_SUCCEEDED="false"
     while [ "$MONITORING_HELM_INSTALL_SUCCEEDED" != "true" ]; do
         MONITORING_HELM_INSTALL_SUCCEEDED="true"
@@ -1147,14 +1139,26 @@ EOF
           --create-namespace \
           --version $CHART_VERSION \
           -f $VALUES_FILE || MONITORING_HELM_INSTALL_SUCCEEDED="false"
-        sleep 3
+        sleep 5
     done
 
     rm -f $VALUES_FILE
-    print_log "Kube-Prometheus-Stack installed successfully in namespace $NAMESPACE."
+    print_log "✅ Kube-Prometheus-Stack installed successfully in namespace $NAMESPACE."
 
-    # --- ✅ GPU ServiceMonitor fix ---
-    print_log "Applying ServiceMonitor for NVIDIA DCGM Exporter..."
+    # --- Wait for ServiceMonitor CRD to be ready ---
+    print_log "⏳ Waiting for ServiceMonitor CRD to be available..."
+    local timeout=10
+    until kubectl get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1 || [ $timeout -eq 0 ]; do
+        sleep 2
+        ((timeout--))
+    done
+
+    if ! kubectl get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1; then
+        print_err "❌ ServiceMonitor CRD could not be found. Exiting."
+    fi
+
+    # --- Apply GPU ServiceMonitor ---
+    print_log "📡 Applying ServiceMonitor for NVIDIA DCGM Exporter..."
     cat <<EOF | kubectl apply -f -
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
@@ -1175,7 +1179,7 @@ spec:
       interval: 30s
 EOF
 
-    print_log "ServiceMonitor for DCGM Exporter applied successfully."
+    print_log "✅ ServiceMonitor for DCGM Exporter applied successfully."
 }
 
 prepare_offline_packages () {
