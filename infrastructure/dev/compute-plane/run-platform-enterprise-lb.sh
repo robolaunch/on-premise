@@ -1135,22 +1135,49 @@ EOF
     local timeout=180
     local waited=0
     while true; do
-        ready_pods=$(kubectl get pods -n $NAMESPACE -l app.kubernetes.io/name=prometheus-operator -o jsonpath='{range .items[*]}{.metadata.name}:{.status.containerStatuses[*].ready}{"\n"}{end}' 2>/dev/null)
+        ready_pods=$(kubectl get pods -n $NAMESPACE \
+            -l "app in (prometheus-operator,kube-prometheus-stack-operator),release=kube-prometheus-stack" \
+            -o jsonpath='{range .items[*]}{.metadata.name}:{.status.containerStatuses[*].ready}{"\n"}{end}' 2>/dev/null)
+
+        # fallback: isimle ara (bazı chart sürümlerinde label yok)
+        if [ -z "$ready_pods" ]; then
+            ready_pods=$(kubectl get pods -n $NAMESPACE | grep kube-prometheus-stack-operator | awk '{print $1}' | while read pod; do
+                status=$(kubectl get pod -n $NAMESPACE "$pod" -o jsonpath='{.status.containerStatuses[*].ready}' 2>/dev/null)
+                echo "$pod:$status"
+            done)
+        fi
+
         if echo "$ready_pods" | grep -q "true"; then
             print_log "✅ Prometheus Operator pod is Ready (waited ${waited}s)."
             break
         fi
+
         if (( waited >= timeout )); then
             print_err "❌ Prometheus Operator pod not ready after ${timeout}s."
         fi
+
         print_log "🕐 Waiting (${waited}s)... Prometheus Operator not ready yet."
         sleep 5
         ((waited+=5))
     done
 
+    # --- Wait for ServiceMonitor CRD to exist ---
+    print_log "⏳ Waiting for ServiceMonitor CRD to be available..."
+    local crd_timeout=60
+    local crd_waited=0
+    until kubectl get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1 || [ $crd_waited -ge $crd_timeout ]; do
+        sleep 2
+        ((crd_waited+=2))
+    done
+
+    if ! kubectl get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1; then
+        print_err "❌ ServiceMonitor CRD not found after ${crd_waited}s."
+    fi
+    print_log "✅ ServiceMonitor CRD detected."
+
     # --- Apply GPU ServiceMonitor ---
     print_log "📡 Applying ServiceMonitor for NVIDIA DCGM Exporter..."
-    cat <<EOF | kubectl apply -f -
+    cat <<EOF | kubectl apply -f - >/dev/null 2>&1
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
@@ -1172,7 +1199,6 @@ EOF
 
     print_log "✅ ServiceMonitor for DCGM Exporter applied successfully."
 }
-
 
 prepare_offline_packages () {
     print_log "Preparing local offline packages for code-server, JupyterLab, ttyd, and FileBrowser..."
