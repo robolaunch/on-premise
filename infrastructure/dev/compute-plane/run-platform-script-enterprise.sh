@@ -1118,11 +1118,6 @@ prometheus:
           resources:
             requests:
               storage: 50Gi
-    serviceMonitorSelectorNilUsesHelmValues: false
-    serviceMonitorSelector: {}
-    serviceMonitorNamespaceSelector:
-      matchNames:
-        - gpu-operator
     podMonitorSelectorNilUsesHelmValues: false
     ruleSelectorNilUsesHelmValues: false
 
