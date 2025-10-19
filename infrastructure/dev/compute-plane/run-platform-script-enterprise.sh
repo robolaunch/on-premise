@@ -1162,22 +1162,7 @@ EOF
     print_log "⏳ Waiting for Prometheus pod to become Ready..."
     kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=prometheus -n $NAMESPACE --timeout=180s || print_err "❌ Prometheus pod not ready."
 
-    # --- Wait for ServiceMonitor CRD ---
-    print_log "⏳ Waiting for ServiceMonitor CRD..."
-    until kubectl get crd servicemonitors.monitoring.coreos.com &>/dev/null; do
-        sleep 3
-    done
-    print_log "✅ ServiceMonitor CRD detected."
-
-    # --- Verification ---
-    print_log "🔍 Verifying ServiceMonitor existence..."
-    if kubectl get servicemonitor nvidia-dcgm-exporter -n $NAMESPACE &>/dev/null; then
-        print_log "✅ ServiceMonitor present and managed by Helm."
-    else
-        print_err "❌ ServiceMonitor not found after Helm install."
-    fi
-
-    rm -f $VALUES_FILE
+	rm -f $VALUES_FILE
 }
 
 prepare_offline_packages () {
@@ -1220,6 +1205,47 @@ prepare_offline_packages () {
     rm -f linux-amd64-filebrowser.tar.gz
 
     print_log "✅ Offline packages are ready under ${BASE_DIR}."
+}
+
+apply_nvidia_dcgm_servicemonitor () {
+    print_log "📡 Applying ServiceMonitor for NVIDIA DCGM Exporter..."
+
+    local NAMESPACE="gpu-operator"
+
+    # ServiceMonitor CRD mevcut mu kontrol et
+    if ! kubectl get crd servicemonitors.monitoring.coreos.com &>/dev/null; then
+        print_err "❌ ServiceMonitor CRD not found. Prometheus Operator may not be installed yet."
+        return 1
+    fi
+
+    # YAML oluştur ve uygula
+    cat <<EOF | kubectl apply -f -
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: nvidia-dcgm-exporter
+  namespace: ${NAMESPACE}
+  labels:
+    release: kube-prometheus-stack
+    app.kubernetes.io/instance: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: nvidia-dcgm-exporter
+  namespaceSelector:
+    matchNames: [ ${NAMESPACE} ]
+  endpoints:
+    - port: gpu-metrics
+      interval: 30s
+EOF
+
+    # Doğrulama
+    print_log "🔍 Verifying ServiceMonitor existence..."
+    if kubectl get servicemonitor nvidia-dcgm-exporter -n ${NAMESPACE} &>/dev/null; then
+        print_log "✅ ServiceMonitor 'nvidia-dcgm-exporter' successfully applied and active."
+    else
+        print_err "❌ Failed to create ServiceMonitor 'nvidia-dcgm-exporter'."
+    fi
 }
 
 ##############################################################
@@ -1294,6 +1320,8 @@ print_global_log "Installing Monitoring Stack..."
 (install_monitoring_stack)
 print_global_log "Preparing offline packages..."
 (prepare_offline_packages)
+print_global_log "Applyinng service monitor..."
+(apply_nvidia_dcgm_servicemonitor)
 #print_global_log "Installing robolaunch Operator Suite...";
 #(install_operator_suite)
 #print_global_log "Deploying MetricsExporter namespace...";
