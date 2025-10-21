@@ -408,32 +408,6 @@ sharing:
     --set runtimeClassName=nvidia \
     -f $DIR_PATH/nvidia-device-plugin/values.yaml;
 }
-install_cert_manager () {
-    echo "installCRDs: true
-image:
-  repository: quay.io/robolaunchio/cert-manager-controller
-  tag: v1.12.4
-webhook:
-  image:
-    repository: quay.io/robolaunchio/cert-manager-webhook
-    tag: v1.12.4
-cainjector:
-  image:
-    repository: quay.io/robolaunchio/cert-manager-cainjector
-    tag: v1.12.4
-startupapicheck:
-  enabled: false
-  image:
-    repository: quay.io/robolaunchio/cert-manager-ctl
-    tag: v1.12.4" > $DIR_PATH/cert-manager/values.yaml;
-    helm upgrade --install \
-      cert-manager $DIR_PATH/cert-manager/cert-manager-v1.12.4.tgz \
-      --namespace cert-manager \
-      --create-namespace \
-      -f $DIR_PATH/cert-manager/values.yaml
-    # TODO: Check if cert-manager is up & running.
-    sleep 10;
-}
 create_super_admin_crb () {
         echo "kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
@@ -723,149 +697,11 @@ spec:
     done
         rm -rf proxy-ingress.yaml
 }
-install_operator_suite () {
-    echo "controllerManager:
-  kubeRbacProxy:
-    image:
-      repository: quay.io/robolaunchio/kube-rbac-proxy
-      tag: v0.14.0
-  manager:
-    image:
-      repository: quay.io/robolaunchio/robot-controller-manager
-      tag: v$ROBOT_OPERATOR_CHART_VERSION" > $DIR_PATH/robot-operator/values.yaml;
-    RO_HELM_INSTALL_SUCCEEDED="false"
-    while [ "$RO_HELM_INSTALL_SUCCEEDED" != "true" ]
-    do
-        RO_HELM_INSTALL_SUCCEEDED="true"
-        helm upgrade -i \
-            robot-operator $DIR_PATH/robot-operator/robot-operator-$ROBOT_OPERATOR_CHART_VERSION.tgz \
-            --namespace robot-system \
-            --create-namespace \
-            --version $ROBOT_OPERATOR_CHART_VERSION \
-            -f $DIR_PATH/robot-operator/values.yaml || RO_HELM_INSTALL_SUCCEEDED="false";
-        sleep 1;
-    done
-
-}
 federate_metrics_exporter () {
     wget https://github.com/kubernetes-retired/kubefed/releases/download/v0.9.2/kubefedctl-0.9.2-linux-amd64.tgz;
     tar -xvzf kubefedctl-0.9.2-linux-amd64.tgz;
     mv ./kubefedctl /usr/local/bin/;
     kubefedctl enable namespaces metricsexporters;
-}
-deploy_metrics_namespace () {
-    cat << EOF | kubectl apply -f -
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: rl-metrics
-EOF
-}
-install_nvidia_dcgm_exporter () {
-    kubectl apply -f https://raw.githubusercontent.com/prometheus-community/helm-charts/main/charts/kube-prometheus-stack/charts/crds/crds/crd-servicemonitors.yaml;
-    echo "image:
-  repository: nvidia/dcgm-exporter
-  tag: 3.3.0-3.2.0-ubuntu22.04
-arguments: ["-f", "/etc/dcgm-exporter/dcp-metrics-included.csv"]
-serviceMonitor:
-  enabled: true
-  interval: 3s" > $DIR_PATH/nvidia-dcgm-exporter/values.yaml
-    helm upgrade --install \
-      dcgm-exporter $DIR_PATH/nvidia-dcgm-exporter/dcgm-exporter-3.2.0.tgz \
-      --namespace rl-metrics \
-      --create-namespace \
-      --set runtimeClassName=nvidia \
-      -f $DIR_PATH/nvidia-dcgm-exporter/values.yaml;
-}
-deploy_metrics_exporter () {
-    DEFAULT_NETWORK_INTERFACE=$(route | grep '^default' | grep -o '[^ ]*$')
-    cat << EOF | kubectl apply -f -
-apiVersion: robot.roboscale.io/v1alpha1
-kind: MetricsExporter
-metadata:
-  name: rl-metrics
-  namespace: rl-metrics
-  labels:
-    robolaunch.io/cloud-instance: $CLOUD_INSTANCE
-spec:
-  gpu:
-    track: true
-    interval: 5
-  network:
-    track: true
-    interval: 3
-    interfaces:
-    - $DEFAULT_NETWORK_INTERFACE
-EOF
-}
-install_metrics_ingress () {
-  cat <<EOF > $DIR_PATH/gpu-operator/metrics-ingress.yaml
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: gpu-metrics
-  namespace: gpu-operator
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /\$2
-    nginx.ingress.kubernetes.io/proxy-buffer-size: 16k
-    nginx.ingress.kubernetes.io/proxy-buffers-number: "4"
-spec:
-  ingressClassName: nginx
-  rules:
-    - host: ${SERVER_URL}
-      http:
-        paths:
-          - path: /metrics(/|$)(.*)
-            pathType: Prefix
-            backend:
-              service:
-                name: nvidia-dcgm-exporter
-                port:
-                  number: 9400
-  tls:
-    - hosts:
-        - ${SERVER_URL}
-      secretName: prod-tls
-EOF
-
-  kubectl apply -f $DIR_PATH/gpu-operator/metrics-ingress.yaml
-  rm -f $DIR_PATH/gpu-operator/metrics-ingress.yaml
-}
-set_up_file_manager () {
-    FILEBROWSER_CONFIG_PATH=/etc/robolaunch/filebrowser;
-
-    curl -fsSL https://raw.githubusercontent.com/tunahanertekin/filebrowser/master/get.sh | bash;
-    mkdir -p /etc/robolaunch/services ${FILEBROWSER_CONFIG_PATH} /var/log/services/vdi;
-    git clone https://github.com/robolaunch/file-manager-config ${FILEBROWSER_CONFIG_PATH}/filebrowser-config;
-
-    filebrowser config init -d ${FILEBROWSER_CONFIG_PATH}/filebrowser-host.db;
-    filebrowser users add admin admin -d ${FILEBROWSER_CONFIG_PATH}/filebrowser-host.db;
-    filebrowser config set --auth.method=noauth -d ${FILEBROWSER_CONFIG_PATH}/filebrowser-host.db;
-    filebrowser config set --branding.name "robolaunch" \
-        --branding.files ${FILEBROWSER_CONFIG_PATH}"/filebrowser-config/branding" \
-        --branding.disableExternal \
-        -d ${FILEBROWSER_CONFIG_PATH}/filebrowser-host.db;
-
-    chmod 1777 ${FILEBROWSER_CONFIG_PATH}/filebrowser-host.db /var/log/services ${FILEBROWSER_CONFIG_PATH}/filebrowser-config/;
-    chown root ${FILEBROWSER_CONFIG_PATH}/filebrowser-host.db /var/log/services ${FILEBROWSER_CONFIG_PATH}/filebrowser-config/;
-
-    echo "[Unit]
-After=network.target
-
-[Service]
-ExecStart=/usr/local/bin/filebrowser -b /host -a 127.0.0.1 -p 2500 -d /etc/robolaunch/filebrowser/filebrowser-host.db -r /
-
-[Install]
-WantedBy=default.target" > /etc/systemd/system/filebrowser.service;
-    chmod 664 /etc/systemd/system/filebrowser.service;
-    systemctl daemon-reload;
-    systemctl enable filebrowser.service;
-    systemctl start filebrowser.service;
-
-    # deploy kubernetes resources for filebrowser relay
-    sed -i "s/<CLOUD-INSTANCE>/$CLOUD_INSTANCE/g" $DIR_PATH/filemanager/filebrowser-relay-resources.yaml;
-    sed -i "s/<ROOT-DNS>/$DOMAIN/g" $DIR_PATH/filemanager/filebrowser-relay-resources.yaml;
-    kubectl apply -f $DIR_PATH/filemanager/filebrowser-relay-resources.yaml;
 }
 
 # ---- GPU Operator Config Function ----
@@ -1300,8 +1136,6 @@ print_global_log "Installing oauth2-proxy...";
 (install_oauth2_proxy)
 print_global_log "Installing openebs...";
 (install_openebs)
-#print_global_log "Installing cert-manager...";
-#(install_cert_manager)
 print_global_log "Installing proxy-ingress...";
 (install_proxy_ingress)
 print_global_log "Installing NVIDIA runtime...";
@@ -1312,17 +1146,5 @@ print_global_log "Installing Monitoring Stack..."
 (install_monitoring_stack)
 print_global_log "Preparing offline packages..."
 (prepare_offline_packages)
-print_global_log "Applyinng service monitor..."
+print_global_log "Applying service monitor..."
 (apply_nvidia_dcgm_servicemonitor)
-#print_global_log "Installing robolaunch Operator Suite...";
-#(install_operator_suite)
-#print_global_log "Deploying MetricsExporter namespace...";
-#(deploy_metrics_namespace)
-#print_global_log "Installing NVIDIA DCGM exporter...";
-#(install_nvidia_dcgm_exporter)
-#print_global_log "Deploying MetricsExporter...";
-#(deploy_metrics_exporter)
-#print_global_log "Deploying Metrics Ingress...";
-#(install_metrics_ingress)
-#print_global_log "Setting up file manager...";
-#(set_up_file_manager)
