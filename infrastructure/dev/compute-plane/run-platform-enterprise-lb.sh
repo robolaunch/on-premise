@@ -232,8 +232,6 @@ create_directories () {
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/coredns https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/coredns-1.24.5.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/coredns https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/coredns.yaml
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/metrics-server https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/metrics-server-3.11.0.tgz
-    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/openebs https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/openebs-3.8.0.tgz
-    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/oauth2-proxy https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/oauth2-proxy-6.17.0.tgz
 }
 install_pre_tools () {
     print_log "Installing Tools...";
@@ -342,27 +340,50 @@ label_node () {
       submariner.io/gateway="true";
 }
 install_openebs () {
-    echo "image:
-  repository: quay.io/
-helper:
-  image: robolaunchio/linux-utils
-  imageTag: 3.4.0
-ndm:
-  image: robolaunchio/node-disk-manager
-  imageTag: 2.1.0
-ndmOperator:
-  image: robolaunchio/node-disk-operator
-  imageTag: 2.1.0
-localprovisioner:
-  image: robolaunchio/provisioner-localpv
-  imageTag: 3.4.0" > $DIR_PATH/openebs/values.yaml;
-    helm upgrade --install \
-      openebs $DIR_PATH/openebs/openebs-3.8.0.tgz \
+    echo "openebs-crds:
+  csi:
+    volumeSnapshots:
+      enabled: false
+      keep: false
+localpv-provisioner:
+  enabled: true
+  rbac:
+    create: true
+# Disable everything else
+zfs-localpv:
+  enabled: false
+lvm-localpv:
+  enabled: false
+rawfile-localpv:
+  enabled: false
+mayastor:
+  enabled: false
+loki:
+  enabled: false
+alloy:
+  enabled: false
+preUpgradeHook:
+  enabled: false
+engines:
+  local:
+    lvm:
+      enabled: false
+    zfs:
+      enabled: false
+    rawfile:
+      enabled: false
+  replicated:
+    mayastor:
+      enabled: false" > $DIR_PATH/openebs/values.yaml;
+    helm repo add openebs https://openebs.github.io/openebs
+    helm repo update
+    kubectl create namespace openebs
+    helm install openebs openebs/openebs \
       --namespace openebs \
-      --create-namespace \
-      -f $DIR_PATH/openebs/values.yaml;
+      --version 4.3.2 \
+      -f $DIR_PATH/openebs/values.yaml
     sleep 5;
-	kubectl patch storageclass openebs-hostpath -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}';
+    kubectl patch storageclass openebs-hostpath -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}';
     kubectl patch storageclass openebs-hostpath --type merge -p '{"metadata": {"annotations": {"cas.openebs.io/config": "- name: StorageType\n  value: \"hostpath\"\n- name: BasePath\n  value: \"/data/openebs/local\"","openebs.io/cas-type": "local"}}}'
 }
 install_nvidia_runtime_class () {
@@ -586,10 +607,7 @@ defaultBackend:
      sleep 2;
 }
 install_oauth2_proxy () {
-        echo "image:
-  repository: quay.io/robolaunchio/oauth2-proxy
-  tag: 7.5.0
-replicaCount: 1
+        echo "replicaCount: 1
 config:
   clientID: $OIDC_ORGANIZATION_CLIENT_ID
   clientSecret: $OIDC_ORGANIZATION_CLIENT_SECRET
@@ -612,10 +630,13 @@ config:
     redirect_url= 'https://$SERVER_URL/oauth2/callback'
     ssl_insecure_skip_verify = true
     allowed_groups= '$GROUP'" > $DIR_PATH/oauth2-proxy/values.yaml;
+	    helm repo add oauth2-proxy https://oauth2-proxy.github.io/manifests
+		
         helm upgrade --install \
-                oauth2-proxy $DIR_PATH/oauth2-proxy/oauth2-proxy-6.17.0.tgz \
+                oauth2-proxy oauth2-proxy/oauth2-proxy \
                 --namespace oauth2-proxy \
                 --create-namespace \
+                --version 8.2.2 \
                 -f $DIR_PATH/oauth2-proxy/values.yaml;
         sleep 2;
 }
