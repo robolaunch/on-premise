@@ -233,13 +233,7 @@ create_directories () {
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/coredns https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/coredns.yaml
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/metrics-server https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/metrics-server-3.11.0.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/openebs https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/openebs-3.8.0.tgz
-    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/nvidia-device-plugin https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/nvidia-device-plugin-0.14.2.tgz
-    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/nvidia-dcgm-exporter https://github.com/robolaunch/on-premise/releases/download/0.1.2-prerelease.10/dcgm-exporter-3.2.0.tgz
-    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/cert-manager https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/cert-manager-v1.12.4.tgz
-    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/ingress-nginx https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/ingress-nginx-4.7.1.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/oauth2-proxy https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/oauth2-proxy-6.17.0.tgz
-    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/robot-operator https://github.com/robolaunch/charts/releases/download/robot-operator-$ROBOT_OPERATOR_CHART_VERSION/robot-operator-$ROBOT_OPERATOR_CHART_VERSION.tgz
-    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/filemanager https://github.com/robolaunch/on-premise/releases/download/0.1.2-prerelease.10/filebrowser-relay-resources.yaml
 }
 install_pre_tools () {
     print_log "Installing Tools...";
@@ -379,35 +373,6 @@ metadata:
   name: nvidia
 handler: nvidia
 EOF
-}
-install_nvidia_device_plugin () {
-    echo "image:
-  repository: quay.io/robolaunchio/k8s-device-plugin
-  tag: v0.14.2" > $DIR_PATH/nvidia-device-plugin/values.yaml;
-    if [[ -z "${MIG_INSTANCE_TYPE}" ]]; then
-      echo "version: v1
-sharing:
-  timeSlicing:
-    resources:
-    - name: nvidia.com/gpu
-      replicas: 28" > $DIR_PATH/nvidia-device-plugin/config.yaml;
-    else
-      echo "version: v1
-flags:
-  migStrategy: mixed
-sharing:
-  timeSlicing:
-    resources:
-    - name: nvidia.com/gpu
-      replicas: 28
-    - name: nvidia.com/$MIG_INSTANCE_TYPE
-      replicas: 2" > $DIR_PATH/nvidia-device-plugin/config.yaml;
-    fi
-    helm upgrade -i nvdp $DIR_PATH/nvidia-device-plugin/nvidia-device-plugin-0.14.2.tgz \
-    --namespace nvidia-device-plugin \
-    --create-namespace \
-    --set runtimeClassName=nvidia \
-    -f $DIR_PATH/nvidia-device-plugin/values.yaml;
 }
 create_super_admin_crb () {
         echo "kind: ClusterRole
@@ -697,12 +662,6 @@ spec:
         sleep 1;
     done
         rm -rf proxy-ingress.yaml
-}
-federate_metrics_exporter () {
-    wget https://github.com/kubernetes-retired/kubefed/releases/download/v0.9.2/kubefedctl-0.9.2-linux-amd64.tgz;
-    tar -xvzf kubefedctl-0.9.2-linux-amd64.tgz;
-    mv ./kubefedctl /usr/local/bin/;
-    kubefedctl enable namespaces metricsexporters;
 }
 
 # ---- GPU Operator Config Function ----
