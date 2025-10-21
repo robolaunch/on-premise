@@ -117,7 +117,6 @@ set_cloud_instance_alias () {
         CLOUD_INSTANCE_ALIAS=$CLOUD_INSTANCE_ALIAS;
     fi
 }
-
 set_public_ip () {
     if [[ -z "${PUBLIC_IP}" ]]; then
         PUBLIC_IP=$(curl https://ipinfo.io/ip);
@@ -302,6 +301,7 @@ set_up_k3s () {
           --disable-network-policy \
           --disable=traefik \
           --disable=local-storage \
+          --data-dir=/data/lib/ \
           --pause-image=quay.io/robolaunchio/mirrored-pause:3.6 \
           --kube-apiserver-arg \
             oidc-issuer-url=$OIDC_URL \
@@ -369,6 +369,7 @@ localprovisioner:
       -f $DIR_PATH/openebs/values.yaml;
     sleep 5;
     kubectl patch storageclass openebs-hostpath -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}';
+    kubectl patch storageclass openebs-hostpath --type merge -p '{"metadata": {"annotations": {"cas.openebs.io/config": "- name: StorageType\n  value: \"hostpath\"\n- name: BasePath\n  value: \"/data/openebs/local\"","openebs.io/cas-type": "local"}}}'
 }
 install_nvidia_runtime_class () {
     cat << EOF | kubectl apply -f -
@@ -810,7 +811,7 @@ EOF
     kubectl label node ${NODE_NAME} nvidia.com/mig.config=custom-mig --overwrite
   fi
 
-  # values.yaml (senaryoya göre)
+  # values.yaml
   cat > ${VALUES_FILE} <<EOF
 mig:
   strategy: mixed
@@ -1126,7 +1127,7 @@ print_global_log "Creating super admin crb...";
 (create_super_admin_crb)
 # print_global_log "Installing coredns...";
 # (install_coredns)
-print_global_log "Installing coredns...";
+#print_global_log "Installing coredns...";
 #(install_coredns_as_manifest)
 #print_global_log "Installing metrics-server...";
 #(install_metrics_server)
