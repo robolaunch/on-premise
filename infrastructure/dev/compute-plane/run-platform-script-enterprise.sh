@@ -342,25 +342,48 @@ label_node () {
       submariner.io/gateway="true";
 }
 install_openebs () {
-    echo "image:
-  repository: quay.io/
-helper:
-  image: robolaunchio/linux-utils
-  imageTag: 3.4.0
-ndm:
-  image: robolaunchio/node-disk-manager
-  imageTag: 2.1.0
-ndmOperator:
-  image: robolaunchio/node-disk-operator
-  imageTag: 2.1.0
-localprovisioner:
-  image: robolaunchio/provisioner-localpv
-  imageTag: 3.4.0" > $DIR_PATH/openebs/values.yaml;
-    helm upgrade --install \
-      openebs $DIR_PATH/openebs/openebs-3.8.0.tgz \
+    echo "openebs-crds:
+  csi:
+    volumeSnapshots:
+      enabled: false
+      keep: false
+localpv-provisioner:
+  enabled: true
+  rbac:
+    create: true
+# Disable everything else
+zfs-localpv:
+  enabled: false
+lvm-localpv:
+  enabled: false
+rawfile-localpv:
+  enabled: false
+mayastor:
+  enabled: false
+loki:
+  enabled: false
+alloy:
+  enabled: false
+preUpgradeHook:
+  enabled: false
+engines:
+  local:
+    lvm:
+      enabled: false
+    zfs:
+      enabled: false
+    rawfile:
+      enabled: false
+  replicated:
+    mayastor:
+      enabled: false" > $DIR_PATH/openebs/values.yaml;
+    helm repo add openebs https://openebs.github.io/openebs
+    helm repo update
+    kubectl create namespace openebs
+    helm install openebs openebs/openebs \
       --namespace openebs \
-      --create-namespace \
-      -f $DIR_PATH/openebs/values.yaml;
+      --version 4.3.2 \
+      -f $DIR_PATH/openebs/values.yaml
     sleep 5;
     kubectl patch storageclass openebs-hostpath -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}';
     kubectl patch storageclass openebs-hostpath --type merge -p '{"metadata": {"annotations": {"cas.openebs.io/config": "- name: StorageType\n  value: \"hostpath\"\n- name: BasePath\n  value: \"/data/openebs/local\"","openebs.io/cas-type": "local"}}}'
