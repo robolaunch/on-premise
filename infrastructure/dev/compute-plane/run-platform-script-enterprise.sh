@@ -232,8 +232,6 @@ create_directories () {
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/coredns https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/coredns-1.24.5.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/coredns https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/coredns.yaml
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/metrics-server https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/metrics-server-3.11.0.tgz
-    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/openebs https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/openebs-3.8.0.tgz
-    wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/oauth2-proxy https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/oauth2-proxy-6.17.0.tgz
 }
 install_pre_tools () {
     print_log "Installing Tools...";
@@ -644,10 +642,13 @@ config:
     redirect_url= 'https://$SERVER_URL/oauth2/callback'
     ssl_insecure_skip_verify = true
     allowed_groups= '$GROUP'" > $DIR_PATH/oauth2-proxy/values.yaml;
+	    helm repo add oauth2-proxy https://oauth2-proxy.github.io/manifests
+		
         helm upgrade --install \
-                oauth2-proxy $DIR_PATH/oauth2-proxy/oauth2-proxy-6.17.0.tgz \
+                oauth2-proxy oauth2-proxy/oauth2-proxy \
                 --namespace oauth2-proxy \
                 --create-namespace \
+                --version 8.2.2 \
                 -f $DIR_PATH/oauth2-proxy/values.yaml;
         sleep 2;
 }
