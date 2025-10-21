@@ -616,10 +616,7 @@ defaultBackend:
      sleep 2;
 }
 install_oauth2_proxy () {
-        echo "image:
-  repository: quay.io/robolaunchio/oauth2-proxy
-  tag: 7.5.0
-replicaCount: 1
+        echo "replicaCount: 1
 config:
   clientID: $OIDC_ORGANIZATION_CLIENT_ID
   clientSecret: $OIDC_ORGANIZATION_CLIENT_SECRET
