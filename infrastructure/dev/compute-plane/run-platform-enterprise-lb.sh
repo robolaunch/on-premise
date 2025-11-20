@@ -629,7 +629,8 @@ config:
     cookie_expire = '12h'
     redirect_url= 'https://$SERVER_URL/oauth2/callback'
     ssl_insecure_skip_verify = true
-    allowed_groups= '$GROUP'" > $DIR_PATH/oauth2-proxy/values.yaml;
+    allowed_groups = ['${GROUP}', 'org_${CLOUD_PROVIDER}_super_admin']
+	oidc_groups_claim = 'groups'" > $DIR_PATH/oauth2-proxy/values.yaml;
 	    helm repo add oauth2-proxy https://oauth2-proxy.github.io/manifests
 		
         helm upgrade --install \
