@@ -1,0 +1,29 @@
+import torch
+import time
+
+assert torch.cuda.is_available(), "CUDA not available"
+
+device = "cuda:0"
+
+# float32 = 4 byte
+# 20 GB ≈ 20 * 1024^3 bytes
+# Eleman sayısı = bytes / 4
+num_elements = int(20 * 1024**3 / 4)
+
+print(f"Allocating ~20GB on {device}")
+print(f"Number of float32 elements: {num_elements:,}")
+
+# Tensor allocate
+x = torch.empty(num_elements, device=device, dtype=torch.float32)
+
+# Touch memory (important!)
+x.fill_(1.0)
+
+torch.cuda.synchronize()
+print("Allocation done.")
+
+print(torch.cuda.memory_summary())
+
+print("Sleeping... (CTRL+C to exit)")
+while True:
+    time.sleep(10)
