@@ -1,0 +1,9 @@
+mirrors:
+  "10.1.13.25:5001":
+    endpoint:
+      - "http://10.1.13.25:5001"
+
+configs:
+  "10.1.13.25:5001":
+    tls:
+      insecure_skip_verify: true
