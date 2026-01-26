@@ -979,12 +979,13 @@ prepare_offline_packages () {
     print_log "📦 Downloading code-server ${CODE_VERSION}..."
     cd ${BASE_DIR}/code-server
     wget -q https://github.com/coder/code-server/releases/download/v${CODE_VERSION}/code-server-${CODE_VERSION}-linux-arm64.tar.gz
-    #mv code-server-${CODE_VERSION}-linux-arm64/bin/code-server .
+	tar -xzf code-server-${CODE_VERSION}-linux-arm64.tar.gz
+	#mv code-server-${CODE_VERSION}-linux-arm64/bin/code-server .
 	mv code-server-${CODE_VERSION}-linux-arm64 latest
-    #rm -rf code-server-${CODE_VERSION}-linux-arm64*
+	#rm -rf code-server-${CODE_VERSION}-linux-arm64*
 	rm -f code-server-${CODE_VERSION}-linux-arm64.tar.gz
-    chmod +x latest/bin/code-server
-    #chmod +x code-server
+	chmod +x latest/bin/code-server
+	#chmod +x code-server
 
     # --- JUPYTER ---
     print_log "📦 Downloading JupyterLab dependencies..."
