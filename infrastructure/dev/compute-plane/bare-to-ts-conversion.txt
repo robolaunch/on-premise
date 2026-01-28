@@ -1,0 +1,53 @@
+helm delete gpu-operator -n gpu-operator
+
+nano /root/robolaunch/gpu-operator/values.yaml
+
+devicePlugin:
+  enabled: true
+  runtimeClassName: nvidia
+  config:
+    name: device-plugin-config
+    default: config.yaml
+    create: false
+migManager:
+  enabled: false
+toolkit:
+  enabled: false
+ 
+nano /tmp/gpu-cm.yaml
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: device-plugin-config
+  namespace: gpu-operator
+data:
+  config.yaml: |-
+    version: v1
+    sharing:
+      timeSlicing:
+        resources:
+          - name: nvidia.com/gpu
+            replicas: 2
+
+
+kubectl apply -f /tmp/gpu-cm.yaml			
+
+
+   
+helm upgrade --install gpu-operator nvidia/gpu-operator \
+  -n gpu-operator \
+  --create-namespace \
+  -f /root/robolaunch/gpu-operator/values.yaml \
+  --version=25.3.4
+  
+
+
+
+
+
+
+
+
+
+  
