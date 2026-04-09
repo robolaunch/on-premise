@@ -129,7 +129,7 @@ check_api_server_url () {
     CLOUD_INSTANCE_API_SERVER_URL="$SERVER_URL:6443";
 }
 check_node_name () {
-    NODE_NAME=$(kubectl get nodes -l node-role.kubernetes.io/master -o 'jsonpath={.items[*].metadata.name}');
+    NODE_NAME=$(kubectl get nodes -l node-role.kubernetes.io/control-plane -o 'jsonpath={.items[*].metadata.name}');
 }
 check_cluster_cidr () {
     check_node_name;
