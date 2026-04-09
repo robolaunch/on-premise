@@ -285,7 +285,7 @@ set_up_k3s () {
     fi
 
     curl -sfL https://get.k3s.io | \
-        INSTALL_K3S_VERSION=v1.31.10+k3s1 \
+        INSTALL_K3S_VERSION=v1.34.6+k3s1 \
         K3S_KUBECONFIG_MODE="644" \
         INSTALL_K3S_EXEC="\
 	  --tls-san=$SERVER_URL \
@@ -630,6 +630,9 @@ config:
     redirect_url= 'https://$SERVER_URL/oauth2/callback'
     ssl_insecure_skip_verify = true
     allowed_groups = ['${GROUP}', 'org_${CLOUD_PROVIDER}_super_admin']
+	upstreams = ['static://202']
+	reverse_proxy = true
+	skip_provider_button = true
     oidc_groups_claim = 'groups'" > $DIR_PATH/oauth2-proxy/values.yaml;
 	    helm repo add oauth2-proxy https://oauth2-proxy.github.io/manifests
 		
@@ -878,20 +881,7 @@ alertmanager:
 
 prometheus:
   ingress:
-    enabled: true
-    ingressClassName: nginx
-    annotations:
-      nginx.ingress.kubernetes.io/ssl-redirect: "true"
-      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
-    hosts:
-      - ${SERVER_URL}
-    paths:
-      - /prometheus
-    pathType: Prefix
-    tls:
-      - secretName: prod-tls
-        hosts:
-          - ${SERVER_URL}
+    enabled: false
 
   service:
     type: ClusterIP
@@ -1103,14 +1093,14 @@ print_global_log "Creating super admin crb...";
 #(install_coredns_as_manifest)
 #print_global_log "Installing metrics-server...";
 #(install_metrics_server)
-print_global_log "Installing ingress...";
-(install_ingress_nginx)
+#print_global_log "Installing ingress...";
+#(install_ingress_nginx)
 print_global_log "Installing oauth2-proxy...";
 (install_oauth2_proxy)
 print_global_log "Installing openebs...";
 (install_openebs)
-print_global_log "Installing proxy-ingress...";
-(install_proxy_ingress)
+#print_global_log "Installing proxy-ingress...";
+#(install_proxy_ingress)
 print_global_log "Installing NVIDIA runtime...";
 (install_nvidia_runtime_class)
 print_global_log "Installing NVIDIA gpu operator...";
