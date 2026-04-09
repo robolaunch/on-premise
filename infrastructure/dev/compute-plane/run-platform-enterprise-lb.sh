@@ -630,10 +630,10 @@ config:
     redirect_url= 'https://$SERVER_URL/oauth2/callback'
     ssl_insecure_skip_verify = true
     allowed_groups = ['${GROUP}', 'org_${CLOUD_PROVIDER}_super_admin']
-	upstreams = ['static://202']
-	reverse_proxy = true
-	skip_provider_button = true
-	oidc_groups_claim = 'groups'" > $DIR_PATH/oauth2-proxy/values.yaml;
+    upstreams = ['static://202']
+    reverse_proxy = true
+    skip_provider_button = true
+    oidc_groups_claim = 'groups'" > $DIR_PATH/oauth2-proxy/values.yaml;
 	    helm repo add oauth2-proxy https://oauth2-proxy.github.io/manifests
 		
         helm upgrade --install \
