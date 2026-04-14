@@ -51,6 +51,12 @@ else
     SERVER_URL="$CLOUD_INSTANCE.$DOMAIN"
 fi
 
+if [ -n "$CUSTOM_HOSTNAME" ]; then
+    OAUTH_DOMAIN="${CUSTOM_HOSTNAME#*.}"
+else
+    OAUTH_DOMAIN="$DOMAIN"
+fi
+
 ############## Optional Parameters ##############
 SELF_SIGNED_CERT=$self_signed_cert
 TZ_CONTINENT=$tz_continent
@@ -67,6 +73,11 @@ if [[ -z "${mig_strategy}" ]]; then
     MIG_STRATEGY=none
 else
     MIG_STRATEGY=$mig_strategy
+fi
+if [[ -z "${k3s_version}" ]]; then
+    K3S_VERSION=v1.34.6+k3s1
+else
+    K3S_VERSION=$k3s_version
 fi
 #################################################
 
@@ -228,6 +239,7 @@ create_directories () {
     mkdir -p $DIR_PATH/oauth2-proxy;
     mkdir -p $DIR_PATH/robot-operator;
     mkdir -p $DIR_PATH/filemanager;
+    mkdir -p $DIR_PATH/traefik;
 
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/coredns https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/coredns-1.24.5.tgz
     wget --header "Authorization: token $GITHUB_PAT" -P $DIR_PATH/coredns https://github.com/robolaunch/on-premise/releases/download/$PLATFORM_VERSION/coredns.yaml
@@ -285,7 +297,7 @@ set_up_k3s () {
     fi
 
     curl -sfL https://get.k3s.io | \
-        INSTALL_K3S_VERSION=v1.34.6+k3s1 \
+        INSTALL_K3S_VERSION=$K3S_VERSION \
         K3S_KUBECONFIG_MODE="644" \
         INSTALL_K3S_EXEC="\
 	  --tls-san=$SERVER_URL \
@@ -618,8 +630,8 @@ config:
     oidc_issuer_url = '$OIDC_URL'
     email_domains = ['*']
     scope = 'openid profile email'
-    whitelist_domains = '.$DOMAIN'
-    cookie_domains= '.$DOMAIN'
+    whitelist_domains = '.$OAUTH_DOMAIN'
+    cookie_domains= '.$OAUTH_DOMAIN'
     pass_authorization_header = true
     pass_access_token = true
     pass_user_headers = true
@@ -674,6 +686,170 @@ spec:
         sleep 1;
     done
         rm -rf proxy-ingress.yaml
+}
+
+install_traefik () {
+    cat > $DIR_PATH/traefik/values.yaml <<EOF
+service:
+  type: NodePort
+
+deployment:
+  kind: Deployment
+  replicas: 1
+
+ports:
+  web:
+    port: 80
+    exposedPort: 80
+    nodePort: 32080
+  websecure:
+    port: 443
+    exposedPort: 443
+    nodePort: 32443
+
+gateway:
+  enabled: false
+
+providers:
+  kubernetesGateway:
+    enabled: true
+    experimentalChannel: false
+
+gatewayClass:
+  enabled: true
+  name: traefik
+
+experimental:
+  plugins:
+    validate-headers:
+      moduleName: "github.com/frankforpresident/traefik-plugin-validate-headers"
+      version: "v0.0.3"
+
+tolerations:
+  - key: node-role.kubernetes.io/control-plane
+    operator: Exists
+    effect: NoSchedule
+  - key: node-role.kubernetes.io/master
+    operator: Exists
+    effect: NoSchedule
+EOF
+
+    helm repo add traefik https://traefik.github.io/charts
+    helm repo update
+    helm install traefik traefik/traefik \
+        --namespace traefik \
+        --create-namespace \
+        --version 39.0.5 \
+        -f $DIR_PATH/traefik/values.yaml
+    sleep 2;
+
+    kubectl apply --server-side --force-conflicts -f \
+        https://github.com/kubernetes-sigs/gateway-api/releases/latest/download/experimental-install.yaml
+
+    kubectl apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: robolaunch-gateway
+  namespace: oauth2-proxy
+spec:
+  gatewayClassName: traefik
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: 80
+    hostname: "$SERVER_URL"
+    allowedRoutes:
+      namespaces:
+        from: Same
+EOF
+
+    kubectl apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: oauth2-proxy
+  namespace: oauth2-proxy
+  labels:
+    managed-by: manual
+    component: oauth2-proxy
+spec:
+  parentRefs:
+  - name: robolaunch-gateway
+  hostnames:
+  - "$SERVER_URL"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /oauth2
+    backendRefs:
+    - name: oauth2-proxy
+      port: 80
+EOF
+
+    kubectl apply -f - <<'EOF'
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: gateway-api-referencegrant-manager
+  namespace: oauth2-proxy
+rules:
+- apiGroups: ["gateway.networking.k8s.io"]
+  resources: ["referencegrants"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: allow-referencegrant-from-users
+  namespace: oauth2-proxy
+subjects:
+- kind: Group
+  name: "system:authenticated"
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: gateway-api-referencegrant-manager
+  apiGroup: rbac.authorization.k8s.io
+EOF
+
+    kubectl apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: robolaunch-gateway
+  namespace: monitoring
+spec:
+  gatewayClassName: traefik
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    hostname: "$SERVER_URL"
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: kube-prometheus-stack-prometheus
+  namespace: monitoring
+spec:
+  parentRefs:
+  - name: robolaunch-gateway
+  hostnames:
+  - "$SERVER_URL"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /prometheus
+    backendRefs:
+    - name: kube-prometheus-stack-prometheus
+      port: 9090
+EOF
 }
 
 # ---- GPU Operator Config Function ----
@@ -1107,6 +1283,8 @@ print_global_log "Installing NVIDIA gpu operator...";
 (configure_gpu_operator)
 print_global_log "Installing Monitoring Stack..."
 (install_monitoring_stack)
+print_global_log "Installing Traefik..."
+(install_traefik)
 print_global_log "Preparing offline packages..."
 (prepare_offline_packages)
 print_global_log "Applying service monitor..."
