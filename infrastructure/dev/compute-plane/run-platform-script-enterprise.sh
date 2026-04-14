@@ -75,7 +75,7 @@ else
     MIG_STRATEGY=$mig_strategy
 fi
 if [[ -z "${k3s_version}" ]]; then
-    K3S_VERSION=v1.31.10+k3s1
+    K3S_VERSION=v1.34.6+k3s1
 else
     K3S_VERSION=$k3s_version
 fi
