@@ -1182,6 +1182,27 @@ EOF
     print_log "⏳ Waiting for Prometheus pod to become Ready..."
     kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=prometheus -n $NAMESPACE --timeout=180s || print_err "❌ Prometheus pod not ready."
 
+    sleep 10
+	NAMESPACE="monitoring"
+    DS_NAME="kube-prometheus-stack-prometheus-node-exporter"
+
+    echo "Checking DaemonSet: $DS_NAME in namespace: $NAMESPACE"
+
+    # hostNetwork var mı kontrol et
+    HOST_NETWORK=$(kubectl get daemonset $DS_NAME -n $NAMESPACE -o jsonpath='{.spec.template.spec.hostNetwork}')
+
+    if [ "$HOST_NETWORK" == "true" ]; then
+      echo "hostNetwork=true detected. Removing..."
+
+      kubectl patch daemonset $DS_NAME -n $NAMESPACE \
+        --type='json' \
+        -p='[{"op": "remove", "path": "/spec/template/spec/hostNetwork"}]'
+
+      echo "hostNetwork removed successfully."
+    else
+      echo "hostNetwork not set or already false. Nothing to do."
+    fi
+
 	rm -f $VALUES_FILE
 }
 
