@@ -647,6 +647,7 @@ config:
     set_authorization_header = true
     set_xauthrequest = true
     cookie_refresh = false
+    cookie_csrf_per_request = true
     cookie_expire = '12h'
     redirect_url= 'https://$SERVER_URL/oauth2/callback'
     ssl_insecure_skip_verify = true
