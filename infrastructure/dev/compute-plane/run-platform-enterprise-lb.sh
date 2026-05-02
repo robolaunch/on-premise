@@ -1051,12 +1051,15 @@ install_monitoring_stack () {
 
     local NAMESPACE="monitoring"
     local CHART_VERSION="77.14.0"
-    local VALUES_FILE="$DIR_PATH/gpu-operator/values-monitoring.yaml"
+    mkdir -p "$DIR_PATH/monitoring"
+    local VALUES_FILE="$DIR_PATH/monitoring/values.yaml"
 
     helm repo add prometheus-community https://prometheus-community.github.io/helm-charts || true
     helm repo update
 
     # --- Dynamic Helm values file ---
+    # For CPU clusters we omit the DCGM ServiceMonitor (no gpu-operator namespace present)
+    if [ "$COMPUTE_TYPE" != "cpu" ]; then
     cat > $VALUES_FILE <<EOF
 grafana:
   enabled: false
@@ -1084,6 +1087,26 @@ prometheus:
           interval: 30s
 
   prometheusSpec:
+EOF
+    else
+    cat > $VALUES_FILE <<EOF
+grafana:
+  enabled: false
+
+alertmanager:
+  enabled: false
+
+prometheus:
+  ingress:
+    enabled: false
+
+  service:
+    type: ClusterIP
+
+  prometheusSpec:
+EOF
+    fi
+    cat >> $VALUES_FILE <<EOF
     externalUrl: https://${SERVER_URL}/prometheus/
     routePrefix: /prometheus
     scrapeInterval: 15s
