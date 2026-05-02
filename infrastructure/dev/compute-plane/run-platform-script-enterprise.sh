@@ -39,6 +39,7 @@ GITHUB_PATH=$github_pat
 NVIDIA_DRIVER_VERSION="580" # $nvidia_driver_version
 CUSTOM_HOSTNAME=$custom_hostname
 CLOUD_PROVIDER=$cloud_provider
+COMPUTE_TYPE=${compute_type:-gpu}
 
 if [ "$CLOUD_PROVIDER" != "default" ]; then
     GROUP_SUPER_ADMIN=org_$CLOUD_PROVIDER"_super_admin"
@@ -232,9 +233,11 @@ create_directories () {
     mkdir -p $DIR_PATH/metrics-server;
     mkdir -p $DIR_PATH/openebs;
     mkdir -p $DIR_PATH/cert-manager;
-    mkdir -p $DIR_PATH/nvidia-device-plugin;
-	mkdir -p $DIR_PATH/gpu-operator;
-    mkdir -p $DIR_PATH/nvidia-dcgm-exporter;
+    if [ "$COMPUTE_TYPE" != "cpu" ]; then
+        mkdir -p $DIR_PATH/nvidia-device-plugin;
+        mkdir -p $DIR_PATH/gpu-operator;
+        mkdir -p $DIR_PATH/nvidia-dcgm-exporter;
+    fi
     mkdir -p $DIR_PATH/ingress-nginx;
     mkdir -p $DIR_PATH/oauth2-proxy;
     mkdir -p $DIR_PATH/robot-operator;
@@ -338,6 +341,10 @@ check_cluster () {
 }
 label_node () {
     check_node_name;
+    MIG_LABEL_ARG=""
+    if [ "$COMPUTE_TYPE" != "cpu" ]; then
+        MIG_LABEL_ARG="robolaunch.io/mig-instance-type=$MIG_INSTANCE_TYPE"
+    fi
     kubectl label --overwrite=true node $NODE_NAME \
       robolaunch.io/platform=$PLATFORM_VERSION \
       robolaunch.io/organization=$ORGANIZATION \
@@ -345,7 +352,8 @@ label_node () {
       robolaunch.io/team=$TEAM \
       robolaunch.io/cloud-instance=$CLOUD_INSTANCE \
       robolaunch.io/cloud-instance-alias=$CLOUD_INSTANCE_ALIAS \
-      robolaunch.io/mig-instance-type=$MIG_INSTANCE_TYPE \
+      robolaunch.io/compute-type=$COMPUTE_TYPE \
+      $MIG_LABEL_ARG \
       robolaunch.io/tz-continent=$TZ_CONTINENT \
       robolaunch.io/tz-city=$TZ_CITY \
       robolaunch.io/domain=$DOMAIN \
@@ -1312,8 +1320,12 @@ print_global_log "Creating directories...";
 (create_directories)
 print_global_log "Installing tools...";
 (install_post_tools)
-print_global_log "Setting up NVIDIA container runtime...";
-(set_up_nvidia_container_runtime)
+if [ "$COMPUTE_TYPE" != "cpu" ]; then
+    print_global_log "Setting up NVIDIA container runtime...";
+    (set_up_nvidia_container_runtime)
+else
+    print_global_log "CPU cluster: skipping NVIDIA container runtime setup";
+fi
 print_global_log "Copying Start Script...";
 (copy_start_script)
 print_global_log "Adding host entries...";
@@ -1342,15 +1354,23 @@ print_global_log "Installing openebs...";
 (install_openebs)
 #print_global_log "Installing proxy-ingress...";
 #(install_proxy_ingress)
-print_global_log "Installing NVIDIA runtime...";
-(install_nvidia_runtime_class)
-print_global_log "Installing NVIDIA gpu operator...";
-(configure_gpu_operator)
+if [ "$COMPUTE_TYPE" != "cpu" ]; then
+    print_global_log "Installing NVIDIA runtime...";
+    (install_nvidia_runtime_class)
+    print_global_log "Installing NVIDIA gpu operator...";
+    (configure_gpu_operator)
+else
+    print_global_log "CPU cluster: skipping NVIDIA runtime class and GPU operator install";
+fi
 print_global_log "Installing Monitoring Stack..."
 (install_monitoring_stack)
 print_global_log "Installing Traefik..."
 (install_traefik)
 print_global_log "Preparing offline packages..."
 (prepare_offline_packages)
-print_global_log "Applying service monitor..."
-(apply_nvidia_dcgm_servicemonitor)
+if [ "$COMPUTE_TYPE" != "cpu" ]; then
+    print_global_log "Applying service monitor..."
+    (apply_nvidia_dcgm_servicemonitor)
+else
+    print_global_log "CPU cluster: skipping NVIDIA DCGM ServiceMonitor";
+fi
