@@ -290,6 +290,49 @@ curl -vk --resolve \$wan_ip:6443:127.0.0.1 https://\$wan_ip:6443/ping" > $DIR_PA
         chmod +x $DIR_PATH/start_script.sh
         cp  $DIR_PATH/start_script.sh /var/lib/cloud/scripts/per-boot/initial-script.sh
 }
+prepare_host () {
+    print_log "=== Preparing host for k3s ===";
+
+    # 1) Swap kapat (kubelet best-practice) — anlik + fstab'da kalici
+    swapoff -a || true;
+    if [ -f /etc/fstab ]; then
+        # zaten yorumlanmamis swap satirlarini yorumla
+        sed -ri.bak '/[[:space:]]swap[[:space:]]/ s/^([^#])/#\1/' /etc/fstab || true;
+    fi
+
+    # 2) Cekirdek modulleri — anlik yukle + kalici
+    modprobe overlay || true;
+    modprobe br_netfilter || true;
+    cat > /etc/modules-load.d/robolaunch.conf <<'EOF'
+overlay
+br_netfilter
+EOF
+
+    # 3) sysctl — kalici dosyaya yaz, sonra uygula
+    cat > /etc/sysctl.d/99-robolaunch.conf <<'EOF'
+net.bridge.bridge-nf-call-iptables  = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+net.ipv4.ip_forward                 = 1
+fs.inotify.max_user_instances       = 512
+fs.inotify.max_user_watches         = 524288
+vm.max_map_count                    = 262144
+fs.file-max                         = 2097152
+EOF
+    sysctl --system >/dev/null 2>&1 || true;
+
+    # 4) Dosya tanimlayici (nofile) limitleri — marker ile idempotent
+    if ! grep -q "robolaunch-nofile" /etc/security/limits.conf 2>/dev/null; then
+        cat >> /etc/security/limits.conf <<'EOF'
+# robolaunch-nofile
+*    soft nofile 1048576
+*    hard nofile 1048576
+root soft nofile 1048576
+root hard nofile 1048576
+EOF
+    fi
+
+    print_log "=== Host preparation complete ===";
+}
 set_up_k3s () {
     CERT_ARG=""
 
@@ -1309,6 +1352,8 @@ print_global_log "Copying Start Script...";
 (copy_start_script)
 print_global_log "Adding host entries...";
 (add_host_entries)
+print_global_log "Preparing host (swap/sysctl/kernel)...";
+(prepare_host)
 print_global_log "Setting up k3s cluster...";
 (set_up_k3s)
 print_global_log "Checking cluster health...";
